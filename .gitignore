@@ -12,11 +12,6 @@
 /.next/
 /out/
 
-# production
-/build
-/dist
-.env
-
 /public/build
 /node_modules
 /env
