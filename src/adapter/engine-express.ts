@@ -219,13 +219,13 @@ function handleError(err: unknown, res: Response) {
   }
 }
 
-function registerDocsEndpoints(app: Express, path: string, specUrl: string) {
-  app.get(path, (req, res) => {
+function registerDocsEndpoints(app: Express, docPath: string, specFilePath: string) {
+  app.get(docPath, (req, res) => {
     const data = fs.readFileSync("dist/index.html", "utf-8");
     res.contentType("html").send(data);
   });
   app.get("/openapi.json", (req, res) => {
-    const data = fs.readFileSync(specUrl, "utf-8");
+    const data = fs.readFileSync(specFilePath, "utf-8");
     res.contentType("json").send(data);
   });
 }
