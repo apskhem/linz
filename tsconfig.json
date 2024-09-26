@@ -8,7 +8,6 @@
     "sourceMap": true,
     "outDir": "./tmp",
     "baseUrl": "./src",
-    "incremental": true,
     "skipLibCheck": true,
     
     "strict": true,
