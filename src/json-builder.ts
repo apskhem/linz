@@ -9,12 +9,12 @@ import { LinzEndpointGroup, Security } from ".";
 
 const API_ERROR_COMPONENT_NAME = "ApiError";
 
-const GeneralErrorSchema = z.object({
+const GENERAL_ERROR_SCHEMA = z.object({
   statusCode: z.number().int().min(100).max(599),
   message: z.union([ z.object({}), z.any().array(), z.string() ])
 });
 
-const ValidationErrorSchema = z.object({
+const VALIDATION_ERROR_SCHEMA = z.object({
   statusCode: z.number().int().min(100).max(599),
   message: z.union([ z.object({}), z.any().array(), z.string() ])
 });
@@ -142,7 +142,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     components: {
       schemas: {
         ...schemaComponent,
-        [API_ERROR_COMPONENT_NAME]: generateSchema(GeneralErrorSchema) as OpenAPIV3.SchemaObject
+        [API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA) as OpenAPIV3.SchemaObject
       },
       securitySchemes: config.security?.length
         ? mapValues(
