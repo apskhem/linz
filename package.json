@@ -1,6 +1,6 @@
 {
   "name": "@apskhem/linz",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "description": "A web framework with first-class OpenAPI documentation support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,10 +11,13 @@
   "keywords": [],
   "author": "Apisit Ritruengroj",
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "check": "tsc --noEmit",
     "build": "npx tsup",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "dependencies": {
     "@anatine/zod-openapi": "1.14.2",
@@ -59,7 +62,7 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": "tests",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
@@ -67,7 +70,7 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "./coverage",
     "testEnvironment": "node"
   }
 }

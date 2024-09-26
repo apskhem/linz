@@ -241,9 +241,9 @@ export function prepareResponse<T>(body: T): PreparedResponse {
  * console.log(result.params); // ['userId', 'postId']
  */
 export function convertPathParams(path: string): { path: string, params: string[] } {
-  const paramRegex = /:(\w+)/g;
+  const paramRegex = /:([^/]+)/g;
 
-  const newPath = path.replace(paramRegex, "{$1}");
+  const newPath = cleanPath(path).replace(paramRegex, "{$1}");
 
   const paramNames = [];
   let match: RegExpExecArray | null = null;

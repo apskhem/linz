@@ -1,6 +1,6 @@
-export * from "adapter/engine-express";
-export * from "json-builder";
-export * from "utils";
+export * from "./adapter/engine-express";
+export * from "./json-builder";
+export * from "./utils";
 
 import type { OpenAPIV3 } from "openapi-types";
 import z, { type ZodObject, type ZodType } from "zod";
