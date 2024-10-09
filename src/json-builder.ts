@@ -1,12 +1,12 @@
 import { generateSchema } from "@anatine/zod-openapi";
+import httpStatus from "http-status";
 import { isEmpty, keyBy, mapValues, upperFirst } from "lodash";
 import { OpenAPIV3 } from "openapi-types";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal-utils";
 
-import { LinzEndpointGroup, Security } from ".";
-import httpStatus from "http-status";
+import { LinzEndpoint, LinzEndpointGroup, Security } from ".";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -130,7 +130,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       responses: {
         ...mapValues(operationObject.responses, (v, k) => {
           return {
-            description: (typeof v === "string" ? String(v) : undefined)
+            description: (typeof v === "string" ? String(v) : null)
               || httpStatus[`${k}` as keyof typeof httpStatus].toString()
               || "No description",
             content:
@@ -142,18 +142,18 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         "400":
           operationObject.requestBody || !isEmpty(operationObject.parameters)
             ? {
-              description: "Misformed data in a sending request",
+              description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",
               content: intoContentTypeRef("application/json", VALIDATION_ERROR_COMPONENT_NAME)
             }
             : undefined!,
         "401": operationObject.security?.length
           ? {
-            description: "Unauthorized",
+            description: getResponseStatusDesc(operationObject.responses, 401) || httpStatus[401],
             content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
           }
           : undefined!,
         "500": {
-          description: "Server unhandled or runtime error that may occur",
+          description: getResponseStatusDesc(operationObject.responses, 500) || "Server unhandled or runtime error that may occur",
           content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
         }
       }
@@ -206,4 +206,9 @@ function intoFormDataBody(schema: OpenAPIV3.SchemaObject): OpenAPIV3.SchemaObjec
       v.nullable ? { type: "string", format: "binary" } : v
     )
   } as OpenAPIV3.SchemaObject;
+}
+
+function getResponseStatusDesc(response: LinzEndpoint["responses"], status: number): string | null {
+  const tmp = response[status];
+  return typeof tmp === "string" ? String(tmp) : null;
 }

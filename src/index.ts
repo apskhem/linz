@@ -73,10 +73,7 @@ export function endpoint<
   TPath extends ZodObject<Record<string, ZodParameterTypes>>,
   TCookie extends ZodObject<Record<string, ZodParameterTypes>>,
   TBody extends z.ZodFirstPartySchemaTypes,
-  TResponse extends {
-    [status: number]: z.ZodFirstPartySchemaTypes | boolean;
-    default?: z.ZodFirstPartySchemaTypes;
-  }
+  TResponse extends LinzEndpoint["responses"]
 >(endpoint: {
   tags?: Tag[];
   summary?: string;

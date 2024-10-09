@@ -46,7 +46,7 @@ type LinzEndpoint = {
     requestBody?: z.ZodFirstPartySchemaTypes;
     requestBodyType?: string;
     responses: {
-        [status: number]: z.ZodFirstPartySchemaTypes | boolean;
+        [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
         default?: z.ZodFirstPartySchemaTypes;
     };
     deprecated?: boolean;
@@ -69,10 +69,7 @@ type HTTPRequest = {
     headers: Record<string, string>;
     cookies: Record<string, string>;
 };
-declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Record<string, ZodParameterTypes>>, THeader extends ZodObject<Record<string, ZodParameterTypes>>, TPath extends ZodObject<Record<string, ZodParameterTypes>>, TCookie extends ZodObject<Record<string, ZodParameterTypes>>, TBody extends z.ZodFirstPartySchemaTypes, TResponse extends {
-    [status: number]: z.ZodFirstPartySchemaTypes | boolean;
-    default?: z.ZodFirstPartySchemaTypes;
-}>(endpoint: {
+declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Record<string, ZodParameterTypes>>, THeader extends ZodObject<Record<string, ZodParameterTypes>>, TPath extends ZodObject<Record<string, ZodParameterTypes>>, TCookie extends ZodObject<Record<string, ZodParameterTypes>>, TBody extends z.ZodFirstPartySchemaTypes, TResponse extends LinzEndpoint["responses"]>(endpoint: {
     tags?: Tag[];
     summary?: string;
     description?: string;
