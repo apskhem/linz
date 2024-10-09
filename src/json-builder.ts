@@ -6,6 +6,7 @@ import { z } from "zod";
 import { convertPathParams } from "./internal-utils";
 
 import { LinzEndpointGroup, Security } from ".";
+import httpStatus from "http-status";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -127,11 +128,11 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         }
         : undefined,
       responses: {
-        ...mapValues(operationObject.responses, (v) => {
+        ...mapValues(operationObject.responses, (v, k) => {
           return {
-            description: "[DUMMY]",
+            description: httpStatus[`${k}` as keyof typeof httpStatus].toString(),
             content:
-              typeof v === "boolean"
+              typeof v === "boolean" || typeof v === "string"
                 ? intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
                 : intoContentTypeRef("application/json", responseSchemaName)
           };
