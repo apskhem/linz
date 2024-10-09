@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import { Readable } from "stream";
 
-import bodeParser from "body-parser";
 import cors, { CorsOptions } from "cors";
 import { Express, Request, Response } from "express";
 import formidable from "formidable";
 import { mapValues } from "lodash";
+import { expressBodyParser } from "middlewares";
 
 import {
   ApiError,
@@ -16,7 +16,7 @@ import {
   METHODS,
   ValidationError
 } from "../";
-import { formatExpressReq, prepareResponse } from "../utils";
+import { formatExpressReq, prepareResponse } from "../internal-utils";
 
 type InitExpressConfig = {
   cors: boolean | CorsOptions;
@@ -36,13 +36,13 @@ export function initExpress(
     app.use(cors(typeof config.cors === "boolean" ? {} : config.cors));
   }
 
-  app.use(bodeParser.json());
+  app.use(expressBodyParser);
 
   console.log(`[server]: Registering ${Object.keys(endpoints).length} endpoints...`);
 
   const registeredOpId = new Set<string>();
   for (const [ methodPath, operatorObject ] of Object.entries(endpoints)) {
-    const [ method = "", ...pathParts ] = methodPath.split(/:/);
+    const [ method = "", ...pathParts ] = methodPath.split(":");
     const path = pathParts.join(":");
 
     if (registeredOpId.has(operatorObject.operationId)) {
