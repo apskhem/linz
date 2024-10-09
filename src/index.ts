@@ -34,7 +34,7 @@ export type LinzEndpoint = {
   requestBody?: z.ZodFirstPartySchemaTypes;
   requestBodyType?: string;
   responses: {
-    [status: number]: z.ZodFirstPartySchemaTypes | boolean;
+    [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
     default?: z.ZodFirstPartySchemaTypes;
   };
   deprecated?: boolean;

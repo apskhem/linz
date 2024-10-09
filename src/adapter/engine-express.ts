@@ -84,7 +84,7 @@ export function initExpress(
               || operatorObject.responses["default"]
           );
 
-        if (!validate || typeof validate === "boolean") {
+        if (!validate || typeof validate === "boolean" || typeof validate === "string") {
           const status = result instanceof HttpResponse ? result.payload.status : usedStatus;
 
           console.error(

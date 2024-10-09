@@ -130,7 +130,9 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       responses: {
         ...mapValues(operationObject.responses, (v, k) => {
           return {
-            description: httpStatus[`${k}` as keyof typeof httpStatus].toString(),
+            description: (typeof v === "string" ? String(v) : undefined)
+              || httpStatus[`${k}` as keyof typeof httpStatus].toString()
+              || "No description",
             content:
               typeof v === "boolean" || typeof v === "string"
                 ? intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
