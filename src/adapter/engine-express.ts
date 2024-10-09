@@ -2,7 +2,6 @@ import { Readable } from "stream";
 
 import cors, { type CorsOptions } from "cors";
 import type { Express, Response } from "express";
-import { expressBodyParser } from "middlewares";
 import type { OpenAPIV3 } from "openapi-types";
 import { SCALAR_TEMPLATE } from "templates";
 
@@ -15,7 +14,8 @@ import {
   METHODS,
   ValidationError
 } from "../";
-import { formatExpressReq, prepareResponse, responseExpressError } from "../internal-utils";
+import { expressBodyParser } from "../internal/middlewares";
+import { formatExpressReq, prepareResponse, responseExpressError } from "../internal/utils";
 
 type OpenAPIDocsOptions = {
   vendor: "scalar";

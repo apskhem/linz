@@ -4,7 +4,7 @@ import { isEmpty, keyBy, mapValues, upperFirst } from "lodash";
 import { OpenAPIV3 } from "openapi-types";
 import { z } from "zod";
 
-import { convertPathParams } from "./internal-utils";
+import { convertPathParams } from "./internal/utils";
 
 import { LinzEndpoint, LinzEndpointGroup, Security } from ".";
 

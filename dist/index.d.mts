@@ -1,35 +1,7 @@
-import { CorsOptions } from 'cors';
-import { Express } from 'express';
 import { OpenAPIV3 } from 'openapi-types';
 import z, { ZodObject, ZodType } from 'zod';
-
-type OpenAPIDocsOptions = {
-    vendor: "scalar";
-    spec: OpenAPIV3.Document;
-    docsPath: string;
-    specPath: string;
-};
-type InitExpressConfig = {
-    cors: boolean | CorsOptions;
-    docs: OpenAPIDocsOptions;
-};
-declare function initExpress(app: Express, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
-
-type BuilderConfig = {
-    openapi: "3.0.3";
-    info: OpenAPIV3.Document["info"];
-    servers?: OpenAPIV3.Document["servers"];
-    tags?: Record<string, OpenAPIV3.TagObject>;
-    paths: LinzEndpointGroup;
-    security?: Security<any>[];
-};
-declare function buildJson(config: BuilderConfig): OpenAPIV3.Document;
-
-declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
-declare function applyGroupConfig(group: LinzEndpointGroup, config: {
-    tags?: LinzEndpoint["tags"];
-    security?: LinzEndpoint["security"];
-}): LinzEndpointGroup;
+import { CorsOptions } from 'cors';
+import { Express } from 'express';
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
 type Extensions = Record<string, any>;
@@ -125,5 +97,33 @@ declare class ValidationError extends Error {
     readonly msg: Record<string, any>;
     constructor(msg: Record<string, any>);
 }
+
+type OpenAPIDocsOptions = {
+    vendor: "scalar";
+    spec: OpenAPIV3.Document;
+    docsPath: string;
+    specPath: string;
+};
+type InitExpressConfig = {
+    cors: boolean | CorsOptions;
+    docs: OpenAPIDocsOptions;
+};
+declare function initExpress(app: Express, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
+
+type BuilderConfig = {
+    openapi: "3.0.3";
+    info: OpenAPIV3.Document["info"];
+    servers?: OpenAPIV3.Document["servers"];
+    tags?: Record<string, OpenAPIV3.TagObject>;
+    paths: LinzEndpointGroup;
+    security?: Security<any>[];
+};
+declare function buildJson(config: BuilderConfig): OpenAPIV3.Document;
+
+declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
+declare function applyGroupConfig(group: LinzEndpointGroup, config: {
+    tags?: LinzEndpoint["tags"];
+    security?: LinzEndpoint["security"];
+}): LinzEndpointGroup;
 
 export { ApiError, type BuilderConfig, type HTTPRequest, type HttpMethod, HttpResponse, type LinzEndpoint, type LinzEndpointGroup, METHODS, Security, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };

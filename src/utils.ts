@@ -1,5 +1,6 @@
-import { cleanPath } from "internal-utils";
 import { intersection, mapKeys, mapValues } from "lodash";
+
+import { cleanPath } from "./internal/utils";
 
 import { LinzEndpoint, LinzEndpointGroup } from ".";
 

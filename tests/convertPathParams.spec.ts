@@ -1,4 +1,4 @@
-import { convertPathParams } from "../src/internal-utils";
+import { convertPathParams } from "../src/internal/utils";
 
 describe(convertPathParams.name, () => {
   it("should replace single parameterized segments correctly", () => {
