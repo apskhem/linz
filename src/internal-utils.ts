@@ -57,10 +57,10 @@ export function responseExpressError(res: Response, statusCode: number, message:
 
 type PreparedResponse = {
   contentType: string;
-  body: string | Buffer | null;
+  body: string | Buffer;
 };
 
-export function prepareResponse<T>(body: T): PreparedResponse {
+export function prepareResponse<T>(body: T): PreparedResponse | null {
   if (typeof body === "string" || typeof body === "number" || typeof body === "boolean") {
     return {
       contentType: "text/plain",
@@ -88,10 +88,7 @@ export function prepareResponse<T>(body: T): PreparedResponse {
     };
   }
   if (typeof body === "undefined") {
-    return {
-      contentType: "text/plain",
-      body: null
-    };
+    return null;
   }
 
   return {

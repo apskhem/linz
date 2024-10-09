@@ -114,13 +114,13 @@ export function initExpress(
           const preparedStatus = status ?? (method === "post" ? 201 : 200);
 
           if (preparedResult) {
-            res
+            return res
               .contentType(preparedResult.contentType)
               .status(preparedStatus)
               .header(headers)
               .send(preparedResult.body);
           } else {
-            res
+            return res
               .header(headers)
               .end();
           }
