@@ -22,6 +22,7 @@ overrides:
       - plugin:yml/standard
 ignorePatterns:
   - src/model/schema/*
+  - examples/*
   - "**/**.js"
 rules:
   # import
