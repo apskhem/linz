@@ -42,7 +42,7 @@ export type LinzEndpoint = {
   handler: (
     req: Readonly<HTTPRequest>,
     extensions: Extensions
-  ) => Promise<HttpResponse<any> | HttpResponse<any>["body"]>;
+  ) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 
 type MergeNonBooleanValues<T> = {
@@ -108,19 +108,11 @@ export function endpoint<
 }
 
 export class HttpResponse<T> {
-  public readonly headers?: Record<string, string>;
-  public readonly status?: number;
-  public readonly body?: T | ReadableStream;
-
-  constructor(payload: {
-    headers?: HttpResponse<T>["headers"];
-    status?: HttpResponse<T>["status"];
-    body?: T;
-  }) {
-    this.headers = payload.headers;
-    this.status = payload.status;
-    this.body = payload.body;
-  }
+  constructor(public readonly payload: {
+    readonly headers?: Record<string, string>;
+    readonly status?: number;
+    readonly body?: T | ReadableStream;
+  }) {}
 }
 
 type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {

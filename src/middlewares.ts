@@ -13,11 +13,11 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
 
   req.on("end", async () => {
-    const rawBody = Buffer.concat(bufferChunks);
-
     if (req.method === "GET") {
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/json") {
+      const rawBody = Buffer.concat(bufferChunks);
+
       try {
         if (rawBody.length) {
           req.body = JSON.parse(rawBody.toString("utf-8"));
@@ -80,9 +80,32 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
 
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/x-www-form-urlencoded") {
+      const data = Buffer.concat(bufferChunks).toString("utf-8");
+      const dataUrl = new URLSearchParams(data);
+
+      const duplicatedKeys: string[] = [];
+      Array.from(dataUrl.keys()).reduce((acc, x) => {
+        acc.has(x) ? duplicatedKeys.push(x) : acc.add(x);
+        return acc;
+      }, new Set<string>());
+
+      if (duplicatedKeys.length) {
+        return responseExpressError(
+          res,
+          400,
+          JSON.stringify(duplicatedKeys.map((fieldName) => ({
+            in: fieldName,
+            result: "Duplicate keys"
+          })))
+        );
+      }
+
+      req.body = Object.fromEntries(dataUrl);
+
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/octet-stream") {
-      req.body = rawBody;
+      req.body = Buffer.concat(bufferChunks);
+
       return next();
     } else {
       return responseExpressError(res, 415, `'${req.headers[HEADER_CONTENT_TYPE]}' content type is not supported`);
@@ -90,6 +113,6 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
   });
 
   req.on("error", (err) => {
-    responseExpressError(res, 500, "Server Error");
+    responseExpressError(res, 500, String(err));
   });
 }

@@ -75,8 +75,8 @@ export function initExpress(
         // validate result
         const validate: LinzEndpoint["responses"][number] | undefined = result instanceof HttpResponse
           ? (
-            result.status
-              ? operatorObject.responses[result.status] || operatorObject.responses["default"]
+            result.payload.status
+              ? operatorObject.responses[result.payload.status] || operatorObject.responses["default"]
               : operatorObject.responses[method === "post" ? 201 : 200] || operatorObject.responses["default"]
           ) : (
             operatorObject.responses[method === "post" ? 201 : 200]
@@ -91,7 +91,7 @@ export function initExpress(
         }
 
         try {
-          validate.parse(result instanceof HttpResponse ? result.body : result);
+          validate.parse(result instanceof HttpResponse ? result.payload.body : result);
         } catch (err: unknown) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"
@@ -101,14 +101,14 @@ export function initExpress(
         }
 
         // prepare response
-        const headers = result instanceof HttpResponse ? result.headers : undefined;
-        const status = result instanceof HttpResponse ? result.status : undefined;
-        const body = result instanceof HttpResponse ? result.body : result;
+        const headers = result instanceof HttpResponse ? result.payload.headers : undefined;
+        const status = result instanceof HttpResponse ? result.payload.status : undefined;
+        const body = result instanceof HttpResponse ? result.payload.body : result;
 
-        if (result instanceof HttpResponse && result.body instanceof Readable) {
-          res.header(result.headers);
+        if (result instanceof HttpResponse && result.payload.body instanceof Readable) {
+          res.header(result.payload.headers);
 
-          return result.body.pipe(res);
+          return result.payload.body.pipe(res);
         } else {
           const preparedResult = prepareResponse(body);
           const preparedStatus = status ?? (method === "post" ? 201 : 200);
