@@ -51,7 +51,7 @@ type LinzEndpoint = {
     };
     deprecated?: boolean;
     security?: Security<any>[];
-    handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<HttpResponse<any> | HttpResponse<any>["body"]>;
+    handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 type MergeNonBooleanValues<T> = {
     [K in keyof T]: T[K] extends ZodType ? z.infer<T[K]> : never;
@@ -97,13 +97,15 @@ declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Reco
     }>, extensions: TExt) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {
-    readonly headers?: Record<string, string>;
-    readonly status?: number;
-    readonly body?: T | ReadableStream;
+    readonly payload: {
+        readonly headers?: Record<string, string>;
+        readonly status?: number;
+        readonly body?: T | ReadableStream;
+    };
     constructor(payload: {
-        headers?: HttpResponse<T>["headers"];
-        status?: HttpResponse<T>["status"];
-        body?: T;
+        readonly headers?: Record<string, string>;
+        readonly status?: number;
+        readonly body?: T | ReadableStream;
     });
 }
 type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
