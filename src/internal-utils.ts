@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { compact, isEmpty } from "lodash";
 
-import { ApiError, HTTPRequest, LinzEndpoint, ValidationError } from ".";
+import { HTTPRequest, LinzEndpoint, ValidationError } from ".";
 
 export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonly<HTTPRequest> {
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
@@ -61,13 +61,16 @@ type PreparedResponse = {
 };
 
 export function prepareResponse<T>(body: T): PreparedResponse | null {
+  if (typeof body === "undefined") {
+    return null;
+  }
   if (typeof body === "string" || typeof body === "number" || typeof body === "boolean") {
     return {
       contentType: "text/plain",
       body: String(body)
     };
   }
-  if (Array.isArray(body) || typeof body === "object") {
+  if (Array.isArray(body) || typeof body === "object" || body === null) {
     return {
       contentType: "application/json",
       body: JSON.stringify(body)
@@ -86,9 +89,6 @@ export function prepareResponse<T>(body: T): PreparedResponse | null {
         .map((item) => item.map(encodeURIComponent).join("="))
         .join("&")
     };
-  }
-  if (typeof body === "undefined") {
-    return null;
   }
 
   return {
