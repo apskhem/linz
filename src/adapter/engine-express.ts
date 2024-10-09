@@ -1,9 +1,10 @@
-import * as fs from "fs";
 import { Readable } from "stream";
 
 import cors, { type CorsOptions } from "cors";
 import type { Express, Response } from "express";
 import { expressBodyParser } from "middlewares";
+import type { OpenAPIV3 } from "openapi-types";
+import { SCALAR_TEMPLATE } from "templates";
 
 import {
   ApiError,
@@ -16,13 +17,16 @@ import {
 } from "../";
 import { formatExpressReq, prepareResponse, responseExpressError } from "../internal-utils";
 
+type OpenAPIDocsOptions = {
+  vendor: "scalar";
+  spec: OpenAPIV3.Document;
+  docsPath: string;
+  specPath: string;
+}
+
 type InitExpressConfig = {
   cors: boolean | CorsOptions;
-  docs: {
-    vendor: "scalar";
-    path: string;
-    specUrl: string;
-  };
+  docs: OpenAPIDocsOptions
 };
 
 export function initExpress(
@@ -136,7 +140,7 @@ export function initExpress(
 
   // docs config
   if (config?.docs) {
-    registerDocsEndpoints(app, config.docs.path, config.docs.specUrl);
+    registerDocsEndpoints(app, config.docs);
   }
 
   // fallback
@@ -172,16 +176,20 @@ function handleError(err: unknown, res: Response) {
   }
 }
 
-function registerDocsEndpoints(app: Express, docPath: string, specFilePath: string) {
-  app.get(docPath, (req, res) => {
+function registerDocsEndpoints(app: Express, options: OpenAPIDocsOptions) {
+  app.get(options.docsPath, (req, res) => {
     res
       .contentType("html")
-      .send(fs.readFileSync("dist/index.html"));
+      .send(
+        SCALAR_TEMPLATE
+          .replace("{{title}}", options.spec.info.title)
+          .replace("{{specUrl}}", options.specPath)
+      );
   });
-  app.get("/openapi.json", (req, res) => {
+  app.get(options.specPath, (req, res) => {
     res
       .contentType("json")
-      .send(fs.readFileSync(specFilePath));
+      .send(JSON.stringify(options.spec, null, 2));
   });
 }
 

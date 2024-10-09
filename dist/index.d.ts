@@ -3,13 +3,15 @@ import { Express } from 'express';
 import { OpenAPIV3 } from 'openapi-types';
 import z, { ZodObject, ZodType } from 'zod';
 
+type OpenAPIDocsOptions = {
+    vendor: "scalar";
+    spec: OpenAPIV3.Document;
+    docsPath: string;
+    specPath: string;
+};
 type InitExpressConfig = {
     cors: boolean | CorsOptions;
-    docs: {
-        vendor: "scalar";
-        path: string;
-        specUrl: string;
-    };
+    docs: OpenAPIDocsOptions;
 };
 declare function initExpress(app: Express, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
 

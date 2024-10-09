@@ -1,17 +1,15 @@
-<!doctype html>
+export const SCALAR_TEMPLATE
+= `<!doctype html>
 <html>
   <head>
-    <title>Scalar API Reference</title>
+    <title>{{title}}</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <!-- Add your own OpenAPI/Swagger specification URL here: -->
-    <script id="api-reference" data-url="/openapi.json"></script>
-
-    <!-- Optional: You can set a full configuration object like this: -->
+    <script id="api-reference" data-url="{{specUrl}}"></script>
     <script>
       var configuration = {
         theme: 'purple',
@@ -22,4 +20,4 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
-</html>
+</html>`;

@@ -12,5 +12,3 @@ esbuild.buildSync({
   packages: "external",
   outfile: "dist/main.js"
 });
-
-fs.copyFileSync("src/templates/index.html", "dist/index.html");
