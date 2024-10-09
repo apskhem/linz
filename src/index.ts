@@ -52,6 +52,8 @@ type MergedResponse<T extends LinzEndpoint["responses"]> = MergeNonBooleanValues
 
 export const METHODS = [ "get", "post", "put", "patch", "delete" ] as const;
 
+export type HttpMethod = (typeof METHODS)[number];
+
 export type LinzEndpointGroup = {
   [methodPath: `${(typeof METHODS)[number]}:${string}`]: LinzEndpoint;
 };

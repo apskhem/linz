@@ -2,13 +2,14 @@ import * as fs from "fs";
 import { Readable } from "stream";
 
 import bodeParser from "body-parser";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import { Express, Request, Response } from "express";
 import formidable from "formidable";
 import { mapValues } from "lodash";
 
 import {
   ApiError,
+  HttpMethod,
   HttpResponse,
   LinzEndpoint,
   LinzEndpointGroup,
@@ -18,7 +19,7 @@ import {
 import { formatExpressReq, prepareResponse } from "../utils";
 
 type InitExpressConfig = {
-  cors: boolean;
+  cors: boolean | CorsOptions;
   docs: {
     vendor: "scalar";
     path: string;
@@ -32,7 +33,7 @@ export function initExpress(
   config?: Partial<InitExpressConfig>
 ) {
   if (config?.cors) {
-    app.use(cors());
+    app.use(cors(typeof config.cors === "boolean" ? {} : config.cors));
   }
 
   app.use(bodeParser.json());
@@ -56,7 +57,7 @@ export function initExpress(
 
     console.log(`[register]: ${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
-    app[method as (typeof METHODS)[number]](path, async (req: Request, res: Response) => {
+    app[method as HttpMethod](path, async (req: Request, res: Response) => {
       const extensions = {};
 
       // parse body for multipart/form-data
