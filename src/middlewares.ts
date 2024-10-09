@@ -9,17 +9,21 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
   req.on("end", () => {
     const body = Buffer.concat(bufferChunks);
 
-    if (req.headers["content-type"] === "application/json") {
+    if (req.method === "GET") {
+      return next();
+    } else if (req.headers["content-type"] === "application/json") {
       try {
-        req.body = body.toJSON();
+        if (body.length) {
+          req.body = JSON.parse(body.toString("utf-8"));
+        }
       } catch (err) {
-        responseExpressError(res, 400, "Invalid JSON");
+        return responseExpressError(res, 400, "Invalid JSON");
       }
-    } else {
-      responseExpressError(res, 415, `'${req.headers}' content type is not supported.`);
-    }
 
-    next();
+      return next();
+    } else {
+      return responseExpressError(res, 415, `'${req.headers["content-type"]}' content type is not supported`);
+    }
   });
 
   req.on("error", (err) => {

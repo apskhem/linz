@@ -16,7 +16,7 @@ import {
   METHODS,
   ValidationError
 } from "../";
-import { formatExpressReq, prepareResponse } from "../internal-utils";
+import { formatExpressReq, prepareResponse, responseExpressError } from "../internal-utils";
 
 type InitExpressConfig = {
   cors: boolean | CorsOptions;
@@ -216,26 +216,28 @@ function handleError(err: unknown, res: Response) {
     });
   } else {
     console.error(String(err));
-    res.status(500).send(String(err));
+    res.status(500).send({
+      statusCode: 500,
+      message: String(err)
+    });
   }
 }
 
 function registerDocsEndpoints(app: Express, docPath: string, specFilePath: string) {
   app.get(docPath, (req, res) => {
-    const data = fs.readFileSync("dist/index.html", "utf-8");
-    res.contentType("html").send(data);
+    res
+      .contentType("html")
+      .send(fs.readFileSync("dist/index.html"));
   });
   app.get("/openapi.json", (req, res) => {
-    const data = fs.readFileSync(specFilePath, "utf-8");
-    res.contentType("json").send(data);
+    res
+      .contentType("json")
+      .send(fs.readFileSync(specFilePath));
   });
 }
 
 function registerNotFoundHandler(app: Express) {
   app.all("*", (req, res) => {
-    res.status(404).send({
-      statusCode: 404,
-      message: `Cannot find ${req.method.toUpperCase()} ${req.path}`
-    });
+    responseExpressError(res, 404, `Cannot find ${req.method.toUpperCase()} ${req.path}`);
   });
 }

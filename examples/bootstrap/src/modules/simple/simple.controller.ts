@@ -18,8 +18,24 @@ const endpoints: LinzEndpointGroup = {
       404: true
     },
     operationId: "echoPathSimple",
-    handler: async ({ body, params }) => {
+    handler: async ({ params }) => {
       return { path: params.path };
+    }
+  }),
+  "post:/echo/e/body": endpoint({
+    requestBody: z.object({
+      echo: z.string()
+    }),
+    responses: {
+      201: z.object({
+        body: z.string()
+      }),
+      404: true
+    },
+    operationId: "echoBodySimple",
+    handler: async ({ body }) => {
+      console.log(body);
+      return { body: body.echo };
     }
   })
 };

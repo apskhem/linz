@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { compact, isEmpty } from "lodash";
 
-import { HTTPRequest, LinzEndpoint, ValidationError } from ".";
+import { ApiError, HTTPRequest, LinzEndpoint, ValidationError } from ".";
 
 export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonly<HTTPRequest> {
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
@@ -40,7 +40,15 @@ export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonl
   };
 }
 
-export function responseExpressError(res: Response, statusCode: number, message: string): void {
+export function responseExpressError(res: Response, statusCode: number, message: string, loggerScope?: string): void {
+  if (typeof loggerScope === "string") {
+    if (loggerScope) {
+      console.error(`[error:${loggerScope}]: ${message}`);
+    } else {
+      console.error(`[error]: ${message}`);
+    }
+  }
+
   res
     .status(statusCode)
     .contentType("application/json")

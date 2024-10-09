@@ -1,9 +1,10 @@
-import { Express, Request } from 'express';
+import { CorsOptions } from 'cors';
+import { Express } from 'express';
 import { OpenAPIV3 } from 'openapi-types';
 import z, { ZodObject, ZodType } from 'zod';
 
 type InitExpressConfig = {
-    cors: boolean;
+    cors: boolean | CorsOptions;
     docs: {
         vendor: "scalar";
         path: string;
@@ -27,16 +28,6 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     tags?: LinzEndpoint["tags"];
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
-declare function formatExpressReq(req: Request, validator: LinzEndpoint): Readonly<HTTPRequest>;
-type PreparedResponse = {
-    contentType: string;
-    body: string | Buffer;
-};
-declare function prepareResponse<T>(body: T): PreparedResponse;
-declare function convertPathParams(path: string): {
-    path: string;
-    params: string[];
-};
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
 type Extensions = Record<string, any>;
@@ -67,6 +58,7 @@ type MergeNonBooleanValues<T> = {
 }[keyof T];
 type MergedResponse<T extends LinzEndpoint["responses"]> = MergeNonBooleanValues<T> extends infer R ? R : never;
 declare const METHODS: readonly ["get", "post", "put", "patch", "delete"];
+type HttpMethod = (typeof METHODS)[number];
 type LinzEndpointGroup = {
     [methodPath: `${(typeof METHODS)[number]}:${string}`]: LinzEndpoint;
 };
@@ -107,13 +99,11 @@ declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Reco
 declare class HttpResponse<T> {
     readonly headers?: Record<string, string>;
     readonly status?: number;
-    readonly body?: T;
-    readonly stream?: boolean;
+    readonly body?: T | ReadableStream;
     constructor(payload: {
         headers?: HttpResponse<T>["headers"];
         status?: HttpResponse<T>["status"];
         body?: T;
-        stream?: HttpResponse<T>["stream"];
     });
 }
 type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
@@ -135,4 +125,4 @@ declare class ValidationError extends Error {
     constructor(msg: Record<string, any>);
 }
 
-export { ApiError, type BuilderConfig, type HTTPRequest, HttpResponse, type LinzEndpoint, type LinzEndpointGroup, METHODS, Security, ValidationError, applyGroupConfig, buildJson, convertPathParams, endpoint, formatExpressReq, initExpress, mergeEndpointGroups, prepareResponse };
+export { ApiError, type BuilderConfig, type HTTPRequest, type HttpMethod, HttpResponse, type LinzEndpoint, type LinzEndpointGroup, METHODS, Security, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };

@@ -110,19 +110,16 @@ export function endpoint<
 export class HttpResponse<T> {
   public readonly headers?: Record<string, string>;
   public readonly status?: number;
-  public readonly body?: T;
-  public readonly stream?: boolean;
+  public readonly body?: T | ReadableStream;
 
   constructor(payload: {
     headers?: HttpResponse<T>["headers"];
     status?: HttpResponse<T>["status"];
     body?: T;
-    stream?: HttpResponse<T>["stream"];
   }) {
     this.headers = payload.headers;
     this.status = payload.status;
     this.body = payload.body;
-    this.stream = payload.stream;
   }
 }
 
