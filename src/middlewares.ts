@@ -60,7 +60,7 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         if (values.length > 1) {
           err.push({
             field: key,
-            message: "Duplicate keys"
+            message: "Duplicated key"
           });
         }
       }
@@ -69,10 +69,13 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         return responseExpressError(
           res,
           400,
-          JSON.stringify(err.map(({ field, message }) => ({
-            in: field,
-            result: message
-          })))
+          JSON.stringify({
+            in: "body",
+            result: err.map(({ field, message }) => ({
+              path: [ field ],
+              message
+            }))
+          })
         );
       }
 
@@ -93,10 +96,13 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         return responseExpressError(
           res,
           400,
-          JSON.stringify(duplicatedKeys.map((fieldName) => ({
-            in: fieldName,
-            result: "Duplicate keys"
-          })))
+          JSON.stringify({
+            in: "body",
+            result: duplicatedKeys.map((fieldName) => ({
+              path: [ fieldName ],
+              message: "Duplicated key"
+            }))
+          })
         );
       }
 

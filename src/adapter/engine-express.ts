@@ -73,19 +73,22 @@ export function initExpress(
         const result = await operatorObject.handler(validatedReq, extensions);
 
         // validate result
+        const usedStatus = method === "post" ? 201 : 200;
         const validate: LinzEndpoint["responses"][number] | undefined = result instanceof HttpResponse
           ? (
             result.payload.status
               ? operatorObject.responses[result.payload.status] || operatorObject.responses["default"]
-              : operatorObject.responses[method === "post" ? 201 : 200] || operatorObject.responses["default"]
+              : operatorObject.responses[usedStatus] || operatorObject.responses["default"]
           ) : (
-            operatorObject.responses[method === "post" ? 201 : 200]
+            operatorObject.responses[usedStatus]
               || operatorObject.responses["default"]
           );
 
         if (!validate || typeof validate === "boolean") {
+          const status = result instanceof HttpResponse ? result.payload.status : usedStatus;
+
           console.error(
-            `[error]: There is no corresponding validator defined in schema for status ${result?.status ?? "default"}`
+            `[error]: There is no corresponding validator defined in schema for status ${status ?? "default"}`
           );
           throw new Error("Internal server error");
         }
@@ -111,7 +114,7 @@ export function initExpress(
           return result.payload.body.pipe(res);
         } else {
           const preparedResult = prepareResponse(body);
-          const preparedStatus = status ?? (method === "post" ? 201 : 200);
+          const preparedStatus = status ?? usedStatus;
 
           if (preparedResult) {
             return res

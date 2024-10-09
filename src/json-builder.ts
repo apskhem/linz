@@ -7,17 +7,41 @@ import { convertPathParams } from "./internal-utils";
 
 import { LinzEndpointGroup, Security } from ".";
 
-const API_ERROR_COMPONENT_NAME = "ApiError";
+const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
+const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
+
+const ZOD_ERROR_ITEM = z.object({
+  code: z.string(),
+  expected: z.string(),
+  received: z.string(),
+  path: z.string().array(),
+  message: z.string()
+});
+
+const ZOD_ERROR_SCHEMA = z.object({
+  in: z.enum([ "body", "queries", "params", "headers", "cookies" ])
+    .describe("The part of a request where data validation failed"),
+  result: z.array(ZOD_ERROR_ITEM)
+    .describe("An array of error items")
+});
 
 const GENERAL_ERROR_SCHEMA = z.object({
-  statusCode: z.number().int().min(100).max(599),
-  message: z.union([ z.object({}), z.any().array(), z.string() ])
-});
+  statusCode: z.number().int().min(100).max(599)
+    .describe("The HTTP response status code"),
+  message: z.string()
+    .describe("The message associated with the error")
+})
+  .describe("A general HTTP error response");
 
-const VALIDATION_ERROR_SCHEMA = z.object({
-  statusCode: z.number().int().min(100).max(599),
-  message: z.union([ z.object({}), z.any().array(), z.string() ])
-});
+const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
+  message: z.union([
+    z.array(ZOD_ERROR_SCHEMA)
+      .describe("An array of error schemas detailing validation issues"),
+    z.string()
+      .describe("Alternatively, a simple error message")
+  ])
+})
+  .describe("An error related to the validation process with more detailed information");
 
 export type BuilderConfig = {
   openapi: "3.0.3";
@@ -108,7 +132,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
             description: "[DUMMY]",
             content:
               typeof v === "boolean"
-                ? intoContentTypeRef("application/json", API_ERROR_COMPONENT_NAME)
+                ? intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
                 : intoContentTypeRef("application/json", responseSchemaName)
           };
         }),
@@ -116,18 +140,18 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           operationObject.requestBody || !isEmpty(operationObject.parameters)
             ? {
               description: "Misformed data in a sending request",
-              content: intoContentTypeRef("application/json", API_ERROR_COMPONENT_NAME)
+              content: intoContentTypeRef("application/json", VALIDATION_ERROR_COMPONENT_NAME)
             }
             : undefined!,
         "401": operationObject.security?.length
           ? {
             description: "Unauthorized",
-            content: intoContentTypeRef("application/json", API_ERROR_COMPONENT_NAME)
+            content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
           }
           : undefined!,
         "500": {
           description: "Server unhandled or runtime error that may occur",
-          content: intoContentTypeRef("application/json", API_ERROR_COMPONENT_NAME)
+          content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
         }
       }
     };
@@ -142,7 +166,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     components: {
       schemas: {
         ...schemaComponent,
-        [API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA) as OpenAPIV3.SchemaObject
+        [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA) as OpenAPIV3.SchemaObject,
+        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA) as OpenAPIV3.SchemaObject
       },
       securitySchemes: config.security?.length
         ? mapValues(
