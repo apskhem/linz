@@ -34,8 +34,20 @@ const endpoints: LinzEndpointGroup = {
     },
     operationId: "echoBodySimple",
     handler: async ({ body }) => {
-      console.log(body);
       return { body: body.echo };
+    }
+  }),
+  "post:/echo/e/void": endpoint({
+    requestBody: z.object({
+      echo: z.string()
+    }),
+    responses: {
+      201: z.void(),
+      404: true
+    },
+    operationId: "echoVoidSimple",
+    handler: async ({ body }) => {
+      return void {};
     }
   })
 };

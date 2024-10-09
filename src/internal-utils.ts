@@ -57,7 +57,7 @@ export function responseExpressError(res: Response, statusCode: number, message:
 
 type PreparedResponse = {
   contentType: string;
-  body: string | Buffer;
+  body: string | Buffer | null;
 };
 
 export function prepareResponse<T>(body: T): PreparedResponse {
@@ -85,6 +85,12 @@ export function prepareResponse<T>(body: T): PreparedResponse {
       body: Array.from(body)
         .map((item) => item.map(encodeURIComponent).join("="))
         .join("&")
+    };
+  }
+  if (typeof body === "undefined") {
+    return {
+      contentType: "text/plain",
+      body: null
     };
   }
 

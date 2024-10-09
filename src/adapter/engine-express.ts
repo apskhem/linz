@@ -1,10 +1,8 @@
 import * as fs from "fs";
 import { Readable } from "stream";
 
-import cors, { CorsOptions } from "cors";
-import { Express, Request, Response } from "express";
-import formidable from "formidable";
-import { mapValues } from "lodash";
+import cors, { type CorsOptions } from "cors";
+import type { Express, Response } from "express";
 import { expressBodyParser } from "middlewares";
 
 import {
@@ -57,65 +55,14 @@ export function initExpress(
 
     console.log(`[register]: ${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
-    app[method as HttpMethod](path, async (req: Request, res: Response) => {
+    app[method as HttpMethod](path, async (req, res) => {
       const extensions = {};
-
-      // parse body for multipart/form-data
-      if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
-        const form = formidable({});
-        const [ fields, files ] = await form.parse(req);
-
-        // collect data
-        const mergedItems = {} as Record<string, (string | File)[]>;
-        for (const [ key, values = [] ] of Object.entries(fields)) {
-          mergedItems[key] ??= [];
-          mergedItems[key]?.push(...values);
-        }
-        for (const [ key, values = [] ] of Object.entries(files)) {
-          mergedItems[key] ??= [];
-
-          const formattedValues = values.map((v) => {
-            const buffer = fs.readFileSync(v.filepath);
-            const data = new Uint8Array(buffer);
-            const file = new File([ data ], v.originalFilename || v.newFilename, {
-              type: v.mimetype || ""
-            });
-            fs.rmSync(v.filepath);
-
-            return file;
-          });
-
-          mergedItems[key]?.push(...formattedValues);
-        }
-
-        // validate
-        const err = [];
-        for (const [ key, values = [] ] of Object.entries(mergedItems)) {
-          if (values.length > 1) {
-            err.push({
-              field: key,
-              message: "Duplicate keys"
-            });
-          }
-        }
-
-        if (err.length) {
-          return handleError(
-            new ValidationError({
-              body: err
-            }),
-            res
-          );
-        }
-
-        req.body = mapValues(mergedItems, (v) => v[0]);
-      }
 
       try {
         // validate
         const validatedReq = formatExpressReq(req, operatorObject);
 
-        // process auth (if has)
+        // process auth (if has) sequentially
         if (operatorObject.security?.length) {
           for (const secOp of operatorObject.security) {
             await secOp.inner.handler(validatedReq, extensions);
@@ -154,30 +101,29 @@ export function initExpress(
         }
 
         // prepare response
-        if (result instanceof HttpResponse) {
-          // FIXME: right now, support only image stream
-          if (result.body instanceof Readable) {
-            Object.entries(result.headers ?? {}).map(([ k, v ]) => res.setHeader(k, v));
+        const headers = result instanceof HttpResponse ? result.headers : undefined;
+        const status = result instanceof HttpResponse ? result.status : undefined;
+        const body = result instanceof HttpResponse ? result.body : result;
 
-            result.body.pipe(res);
+        if (result instanceof HttpResponse && result.body instanceof Readable) {
+          res.header(result.headers);
 
-            return;
-          }
-
-          const preparedResult = prepareResponse(result.body);
-
-          return res
-            .header(result.headers)
-            .status(result.status ?? (method === "post" ? 201 : 200))
-            .contentType(preparedResult.contentType)
-            .send(preparedResult.body);
+          return result.body.pipe(res);
         } else {
-          const preparedResult = prepareResponse(result);
+          const preparedResult = prepareResponse(body);
+          const preparedStatus = status ?? (method === "post" ? 201 : 200);
 
-          return res
-            .status(method === "post" ? 201 : 200)
-            .contentType(preparedResult.contentType)
-            .send(preparedResult.body);
+          if (preparedResult) {
+            res
+              .contentType(preparedResult.contentType)
+              .status(preparedStatus)
+              .header(headers)
+              .send(preparedResult.body);
+          } else {
+            res
+              .header(headers)
+              .end();
+          }
         }
       } catch (err: unknown) {
         return handleError(err, res);
