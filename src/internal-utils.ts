@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { compact, isEmpty } from "lodash";
 
 import { HTTPRequest, LinzEndpoint, ValidationError } from ".";
 
@@ -27,7 +26,7 @@ export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonl
     (err: any) => (errors["cookies"] = JSON.parse(err.message))
   );
 
-  if (!isEmpty(errors)) {
+  if (Object.keys(errors).length) {
     throw new ValidationError(errors);
   }
 
@@ -102,15 +101,15 @@ export function convertPathParams(path: string): { path: string, params: string[
 
   const newPath = cleanPath(path).replace(paramRegex, "{$1}");
 
-  const paramNames = [];
+  const paramNames: string[] = [];
   let match: RegExpExecArray | null = null;
   while ((match = paramRegex.exec(path)) !== null) {
-    paramNames.push(match[1]);
+    paramNames.push(match[1]!);
   }
 
   return {
     path: newPath,
-    params: compact(paramNames)
+    params: paramNames
   };
 }
 
