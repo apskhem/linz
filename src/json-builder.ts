@@ -54,15 +54,15 @@ export type BuilderConfig = {
 };
 
 export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
-  const transformedPath = {} as OpenAPIV3.Document["paths"];
+  const transformedPath: OpenAPIV3.Document["paths"] = {};
 
-  const schemaComponent = {} as NonNullable<OpenAPIV3.ComponentsObject["schemas"]>;
+  const schemaComponent: NonNullable<OpenAPIV3.ComponentsObject["schemas"]> = {};
 
   for (const [ methodPath, operationObject ] of Object.entries(config.paths)) {
-    const [ method, ...pathParts ] = methodPath.split(/:/);
-    const { path, params: pathParams } = convertPathParams(pathParts.join(":"));
+    const [ method, ...pathParts ] = methodPath.split(":");
+    const { path } = convertPathParams(pathParts.join(":"));
 
-    const parameterObject = [] as OpenAPIV3.ParameterObject[];
+    const parameterObject: OpenAPIV3.ParameterObject[] = [];
     const pathObject = transformedPath[path] ?? {};
 
     // collect parameters
@@ -169,8 +169,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     components: {
       schemas: {
         ...schemaComponent,
-        [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA) as OpenAPIV3.SchemaObject,
-        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA) as OpenAPIV3.SchemaObject
+        [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA),
+        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA)
       },
       securitySchemes: config.security?.length
         ? mapValues(
@@ -202,9 +202,9 @@ function intoContentTypeRef(
 function intoFormDataBody(schema: OpenAPIV3.SchemaObject): OpenAPIV3.SchemaObject {
   return {
     type: schema.type,
-    properties: mapValues(schema.properties, (v: any) =>
-      v.nullable ? { type: "string", format: "binary" } : v
-    )
+    properties: mapValues(schema.properties, (v: any) => {
+      return v.nullable ? { type: "string", format: "binary" } : v;
+    })
   } as OpenAPIV3.SchemaObject;
 }
 
