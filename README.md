@@ -7,13 +7,13 @@ A Node.js web framework with first-class OpenAPI documentation support.
 Install the package from the following commands...
 
 ```bash
-  npm install git@github.com:apskhem/linz.git#main
+npm install git@github.com:apskhem/linz.git#main
 ```
 
 Alternatively, include this line into your `package.json`.
 
 ```json
-  "@apskhem/linz": "github:apskhem/linz#main"
+"@apskhem/linz": "github:apskhem/linz#main"
 ```
 
 You can view example usage from `examples`.
