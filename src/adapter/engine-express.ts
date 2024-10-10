@@ -7,10 +7,9 @@ import { SCALAR_TEMPLATE } from "templates";
 
 import {
   ApiError,
-  HttpMethod,
+  type HttpMethod,
   HttpResponse,
-  LinzEndpoint,
-  LinzEndpointGroup,
+  type LinzEndpointGroup,
   METHODS,
   ValidationError
 } from "../";
@@ -74,31 +73,22 @@ export function initExpress(
         }
 
         // process main handler
-        const result = await operatorObject.handler(validatedReq, extensions);
+        const tmpResult = await operatorObject.handler(validatedReq, extensions);
+        const result = tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
+        const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
 
         // validate result
-        const usedStatus = method === "post" ? 201 : 200;
-        const validate: LinzEndpoint["responses"][number] | undefined = result instanceof HttpResponse
-          ? (
-            result.payload.status
-              ? operatorObject.responses[result.payload.status] || operatorObject.responses["default"]
-              : operatorObject.responses[usedStatus] || operatorObject.responses["default"]
-          ) : (
-            operatorObject.responses[usedStatus]
-              || operatorObject.responses["default"]
-          );
+        const responseValidator = operatorObject.responses[usedStatus] || operatorObject.responses["default"];
 
-        if (!validate || typeof validate === "boolean" || typeof validate === "string") {
-          const status = result instanceof HttpResponse ? result.payload.status : usedStatus;
-
+        if (!responseValidator || typeof responseValidator === "boolean" || typeof responseValidator === "string") {
           console.error(
-            `[error]: There is no corresponding validator defined in schema for status ${status ?? "default"}`
+            `[error]: There is no corresponding validator defined in schema for status ${usedStatus}/default`
           );
           throw new Error("Internal server error");
         }
 
         try {
-          validate.parse(result instanceof HttpResponse ? result.payload.body : result);
+          responseValidator.parse(result.payload.body);
         } catch (err: unknown) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"
@@ -107,33 +97,26 @@ export function initExpress(
           throw new Error("Internal server error");
         }
 
-        // prepare response
-        const headers = result instanceof HttpResponse ? result.payload.headers : undefined;
-        const status = result instanceof HttpResponse ? result.payload.status : undefined;
-        const body = result instanceof HttpResponse ? result.payload.body : result;
-
-        if (result instanceof HttpResponse && result.payload.body instanceof Readable) {
+        // response
+        if (result.payload.body instanceof Readable) {
           res.header(result.payload.headers);
 
-          return result.payload.body.pipe(res);
+          result.payload.body.pipe(res);
         } else {
-          const preparedResult = prepareResponse(body);
-          const preparedStatus = status ?? usedStatus;
+          const preparedResult = prepareResponse(result.payload.body);
 
-          if (preparedResult) {
-            return res
+          preparedResult
+            ? res
               .contentType(preparedResult.contentType)
-              .status(preparedStatus)
-              .header(headers)
-              .send(preparedResult.body);
-          } else {
-            return res
-              .header(headers)
+              .status(usedStatus)
+              .header(result.payload.headers)
+              .send(preparedResult.body)
+            : res
+              .header(result.payload.headers)
               .end();
-          }
         }
       } catch (err: unknown) {
-        return handleError(err, res);
+        handleError(err, res);
       }
     });
   }
