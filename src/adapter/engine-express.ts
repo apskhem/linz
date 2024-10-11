@@ -105,15 +105,17 @@ export function initExpress(
         } else {
           const preparedResult = prepareResponse(result.payload.body);
 
-          preparedResult
-            ? res
+          if (preparedResult) {
+            res
               .contentType(preparedResult.contentType)
               .status(usedStatus)
               .header(result.payload.headers)
-              .send(preparedResult.body)
-            : res
+              .send(preparedResult.body);
+          } else {
+            res
               .header(result.payload.headers)
               .end();
+          }
         }
       } catch (err: unknown) {
         handleError(err, res);

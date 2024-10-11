@@ -89,8 +89,10 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
 
       const duplicatedKeys: string[] = [];
       Array.from(dataUrl.keys()).reduce((acc, x) => {
-        acc.has(x) ? duplicatedKeys.push(x) : acc.add(x);
-        return acc;
+        if (acc.has(x)) {
+          duplicatedKeys.push(x);
+        }
+        return acc.add(x);
       }, new Set<string>());
 
       if (duplicatedKeys.length) {
