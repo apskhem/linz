@@ -120,7 +120,7 @@ export function cleanPath(path: string): string {
 function tryCatch<T>(fn: () => T, handler: (err: unknown) => void): T | null {
   try {
     return fn();
-  } catch (err: unknown) {
+  } catch (err) {
     handler(err);
     return null;
   }

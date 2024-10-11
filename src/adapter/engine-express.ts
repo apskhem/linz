@@ -89,7 +89,7 @@ export function initExpress(
 
         try {
           responseValidator.parse(result.payload.body);
-        } catch (err: unknown) {
+        } catch (err) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"
           );
@@ -117,7 +117,7 @@ export function initExpress(
               .end();
           }
         }
-      } catch (err: unknown) {
+      } catch (err) {
         handleError(err, res);
       }
     });

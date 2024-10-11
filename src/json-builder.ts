@@ -99,7 +99,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     // collect response objects
     const responseSchemaName = `${upperFirst(operationObject.operationId)}Response`;
     if (operationObject.responses) {
-      for (const [ status, schema ] of Object.entries(operationObject.responses)) {
+      for (const [ , schema ] of Object.entries(operationObject.responses)) {
         if (typeof schema === "object") {
           schemaComponent[responseSchemaName] = generateSchema(schema) as OpenAPIV3.SchemaObject;
         }
@@ -210,9 +210,11 @@ function intoContentTypeRef(
 function intoFormDataBody(schema: OpenAPIV3.SchemaObject): OpenAPIV3.SchemaObject {
   return {
     type: schema.type,
-    properties: mapValues(schema.properties, (v: any) => {
-      return v.nullable ? { type: "string", format: "binary" } : v;
-    })
+    properties: mapValues(schema.properties, (fieldProp) => (
+      "nullable" in fieldProp && fieldProp.nullable
+        ? { type: "string", format: "binary" }
+        : fieldProp
+    ))
   } as OpenAPIV3.SchemaObject;
 }
 
