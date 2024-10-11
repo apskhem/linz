@@ -57,5 +57,5 @@ export function applyGroupConfig(
     security?: LinzEndpoint["security"];
   }
 ): LinzEndpointGroup {
-  return mapValues(group, (v) => ({ ...config, ...v }));
+  return mapValues(group, (endpoint) => Object.assign(endpoint, config));
 }

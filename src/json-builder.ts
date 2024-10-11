@@ -72,12 +72,13 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
         for (const [ name, itemSchema ] of Object.entries(properties)) {
           const { description, ...schema } = itemSchema as OpenAPIV3.SchemaObject;
+          const isItemRequired = required.includes(name);
 
           parameterObject.push({
             name,
             in: type,
-            description,
-            required: required.includes(name) || undefined,
+            ...(description && { description }),
+            ...(isItemRequired && { required: isItemRequired }),
             schema
           });
         }
@@ -107,26 +108,34 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
     // wrap up
     pathObject[method as OpenAPIV3.HttpMethods] = {
-      tags: operationObject.tags?.length
-        ? Object.values(operationObject.tags).map((v) => v.name)
-        : undefined,
+      ...(operationObject.tags?.length && {
+        tags: Object.values(operationObject.tags).map((v) => v.name)
+      }),
       summary: operationObject.summary || operationObject.operationId,
-      description: operationObject.description,
+      ...(operationObject.description && {
+        description: operationObject.description
+      }),
       operationId: operationObject.operationId,
-      deprecated: operationObject.deprecated,
-      parameters: isEmpty(parameterObject) ? undefined : parameterObject,
-      security: operationObject.security?.map((sec) => ({
-        [sec.inner.name]: []
-      })),
-      requestBody: operationObject.requestBody
-        ? {
+      ...(operationObject.deprecated && {
+        deprecated: operationObject.deprecated
+      }),
+      ...(!isEmpty(parameterObject) && {
+        parameters: parameterObject
+      }),
+      ...(operationObject.security?.length && {
+        security: operationObject.security.map((sec) => ({
+          [sec.inner.name]: []
+        }))
+      }),
+      ...(operationObject.requestBody && {
+        requestBody: {
           description: "[DUMMY]",
           content: intoContentTypeRef(
             operationObject.requestBodyType || "application/json",
             requestBodySchemaName
           )
         }
-        : undefined,
+      }),
       responses: {
         ...mapValues(operationObject.responses, (v, k) => {
           return {
@@ -172,17 +181,16 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA),
         [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA)
       },
-      securitySchemes: config.security?.length
-        ? mapValues(
-          keyBy(
-            config.security.map((x) => x.inner),
-            "name"
-          ),
+      ...(config.security?.length && {
+        securitySchemes: mapValues(
+          keyBy(config.security.map((x) => x.inner), "name"),
           ({ handler, name, ...o }) => o as OpenAPIV3.SecuritySchemeObject
         )
-        : undefined
+      })
     },
-    tags: config.tags && !isEmpty(config.tags) ? Object.values(config.tags) : undefined
+    ...((config.tags && !isEmpty(config.tags)) && {
+      tags: Object.values(config.tags)
+    })
   };
 }
 
