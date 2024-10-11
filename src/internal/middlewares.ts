@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { mapValues } from "lodash";
-import * as multipart from "parse-multipart-data";
 
+import * as multipart from "./multipart";
 import { responseExpressError } from "./utils";
 
 const HEADER_CONTENT_TYPE = "content-type";
@@ -30,6 +30,11 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
       const rawBody = Buffer.concat(bufferChunks);
 
       const boundary = multipart.getBoundary(req.headers["content-type"]);
+
+      if (!boundary) {
+        return responseExpressError(res, 400, "Cannot find multipart boundary");
+      }
+
       const parts = multipart.parse(rawBody, boundary);
       
       // collect data
@@ -40,9 +45,9 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         }
 
         const data = part.filename
-          ? new File([ part.data ], part.filename, {
+          ? new File([ part.data ], part.filename, part.type ? {
             type: part.type
-          })
+          } : {})
           : part.data.toString("utf-8");
 
         (mergedItems[part.name] ??= []).push(data);

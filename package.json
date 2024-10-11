@@ -26,7 +26,6 @@
     "cors": "^2.8.5",
     "http-status": "^1.7.4",
     "lodash": "^4.17.21",
-    "parse-multipart-data": "^1.5.0",
     "zod": "^3.23.8"
   },
   "peerDependencies": {
