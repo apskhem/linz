@@ -87,7 +87,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
     // collect body objects
     const requestBodySchemaName = `${upperFirst(operationObject.operationId)}RequestBody`;
-    if (operationObject.requestBody) {
+    if (operationObject.requestBody && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name) {
       const schema = generateSchema(operationObject.requestBody.body) as OpenAPIV3.SchemaObject;
 
       schemaComponent[requestBodySchemaName]
@@ -100,7 +100,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     const responseSchemaName = `${upperFirst(operationObject.operationId)}Response`;
     if (operationObject.responses) {
       for (const [ , schema ] of Object.entries(operationObject.responses)) {
-        if (typeof schema === "object") {
+        if (typeof schema === "object" && schema._def.typeName !== z.ZodVoid.name) {
           schemaComponent[responseSchemaName] = generateSchema(schema) as OpenAPIV3.SchemaObject;
         }
       }
@@ -135,6 +135,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           content: intoContentTypeRef(
             operationObject.requestBody.mimeType(),
             requestBodySchemaName,
+            operationObject.requestBody.body._def.typeName === z.ZodVoid.name as any,
             operationObject.requestBody instanceof FormDataBody
               ? operationObject.requestBody.encoding
               : undefined
@@ -151,7 +152,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
             content:
               typeof v === "boolean" || typeof v === "string"
                 ? intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
-                : intoContentTypeRef("application/json", responseSchemaName)
+                : intoContentTypeRef("application/json", responseSchemaName, v?._def.typeName === z.ZodVoid.name)
           };
         }),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
@@ -202,8 +203,15 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 function intoContentTypeRef(
   contentType: string,
   schemaComponentName: string,
+  isVoid?: boolean,
   encoding?: FormDataBody["encoding"]
 ): Pick<OpenAPIV3.ResponseObject, "content"> {
+  if (isVoid) {
+    return {
+      [contentType]: {}
+    };
+  }
+  
   return {
     [contentType]: {
       schema: {
