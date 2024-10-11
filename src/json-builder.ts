@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
 
-import { LinzEndpoint, LinzEndpointGroup, Security } from ".";
+import { FormDataBody, LinzEndpoint, LinzEndpointGroup, Security } from ".";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -88,10 +88,10 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     // collect body objects
     const requestBodySchemaName = `${upperFirst(operationObject.operationId)}RequestBody`;
     if (operationObject.requestBody) {
-      const schema = generateSchema(operationObject.requestBody) as OpenAPIV3.SchemaObject;
+      const schema = generateSchema(operationObject.requestBody.body) as OpenAPIV3.SchemaObject;
 
       schemaComponent[requestBodySchemaName]
-        = operationObject.requestBodyType === "multipart/form-data"
+        = operationObject.requestBody instanceof FormDataBody
           ? intoFormDataBody(schema)
           : schema;
     }
@@ -131,10 +131,13 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         requestBody: {
           // TODO: add support for the `description` field.
           content: intoContentTypeRef(
-            operationObject.requestBodyType || "application/json",
-            requestBodySchemaName
+            operationObject.requestBody.mimeType(),
+            requestBodySchemaName,
+            operationObject.requestBody instanceof FormDataBody
+              ? operationObject.requestBody.encoding
+              : undefined
           ),
-          required: !operationObject.requestBody.isOptional()
+          required: !operationObject.requestBody.body.isOptional()
         }
       }),
       responses: {
@@ -196,13 +199,25 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
 function intoContentTypeRef(
   contentType: string,
-  schemaComponentName: string
+  schemaComponentName: string,
+  encoding?: FormDataBody["encoding"]
 ): Pick<OpenAPIV3.ResponseObject, "content"> {
   return {
     [contentType]: {
       schema: {
         $ref: `#/components/schemas/${schemaComponentName}`
-      }
+      },
+      ...(encoding && {
+        encoding: mapValues(encoding, (v) => ({
+          ...v,
+          ...(v.contentType && {
+            contentType: v.contentType.join(", ")
+          }),
+          ...(v.headers && {
+            headers: generateSchema(v.headers)["properties"]
+          })
+        }))
+      })
     }
   };
 }

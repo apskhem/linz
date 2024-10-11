@@ -27,8 +27,7 @@ export type LinzEndpoint = {
     path?: ZodObject<Record<string, ZodParameterTypes>>;
     cookie?: ZodObject<Record<string, ZodParameterTypes>>;
   };
-  requestBody?: z.ZodFirstPartySchemaTypes;
-  requestBodyType?: string;
+  requestBody?: RequestBody;
   responses: {
     [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
     default?: z.ZodFirstPartySchemaTypes;
@@ -68,7 +67,7 @@ export function endpoint<
   THeader extends ZodObject<Record<string, ZodParameterTypes>>,
   TPath extends ZodObject<Record<string, ZodParameterTypes>>,
   TCookie extends ZodObject<Record<string, ZodParameterTypes>>,
-  TBody extends z.ZodFirstPartySchemaTypes,
+  TBody extends RequestBody,
   TResponse extends LinzEndpoint["responses"]
 >(endpoint: {
   tags?: Tag[];
@@ -82,7 +81,6 @@ export function endpoint<
     cookie?: TCookie
   };
   requestBody?: TBody;
-  requestBodyType?: string;
   responses: TResponse;
   deprecated?: boolean;
   security?: Security<any>[];
@@ -92,7 +90,7 @@ export function endpoint<
       headers: z.infer<THeader>
       params: z.infer<TPath>
       cookies: z.infer<TCookie>
-      body: z.infer<TBody>;
+      body: z.infer<TBody["body"]>;
     }>,
     extensions: TExt
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
@@ -101,11 +99,13 @@ export function endpoint<
 }
 
 export class HttpResponse<T> {
-  constructor(public readonly payload: {
-    readonly headers?: Record<string, string>;
-    readonly status?: number;
-    readonly body?: T | ReadableStream;
-  }) {}
+  constructor(
+    public readonly payload: {
+      readonly headers?: Record<string, string>;
+      readonly status?: number;
+      readonly body?: T | ReadableStream;
+    }
+  ) {}
 }
 
 type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
@@ -137,5 +137,68 @@ export class ApiError extends Error {
 export class ValidationError extends Error {
   constructor(public readonly msg: Record<string, any>) {
     super(JSON.stringify(msg));
+  }
+}
+
+abstract class RequestBody<B extends z.ZodType = any> {
+  abstract readonly body: B;
+  abstract mimeType(): string;
+}
+
+export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
+  constructor(
+    public readonly body: B
+  ) {
+    super();
+  }
+
+  override mimeType(): string {
+    return "application/json";
+  }
+}
+
+export class FormDataBody<
+  B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any,
+  K extends keyof z.infer<B> = any
+> extends RequestBody<B> {
+  constructor(
+    public readonly body: B,
+    public readonly encoding?: Record<K, {
+      contentType?: string[],
+      headers?: ZodObject<Record<string, ZodParameterTypes>>,
+      style?: string,
+      explode?: string,
+      allowReserved?: string,
+    }>
+  ) {
+    super();
+  }
+
+  override mimeType(): string {
+    return "multipart/form-data";
+  }
+}
+
+export class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
+  constructor(
+    public readonly body: B
+  ) {
+    super();
+  }
+
+  override mimeType(): string {
+    return "application/x-www-form-urlencoded";
+  }
+}
+
+export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
+  constructor(
+    public readonly body: B
+  ) {
+    super();
+  }
+
+  override mimeType(): string {
+    return "application/octet-stream";
   }
 }

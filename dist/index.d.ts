@@ -17,8 +17,7 @@ type LinzEndpoint = {
         path?: ZodObject<Record<string, ZodParameterTypes>>;
         cookie?: ZodObject<Record<string, ZodParameterTypes>>;
     };
-    requestBody?: z.ZodFirstPartySchemaTypes;
-    requestBodyType?: string;
+    requestBody?: RequestBody;
     responses: {
         [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
         default?: z.ZodFirstPartySchemaTypes;
@@ -43,7 +42,7 @@ type HTTPRequest = {
     headers: Record<string, string>;
     cookies: Record<string, string>;
 };
-declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Record<string, ZodParameterTypes>>, THeader extends ZodObject<Record<string, ZodParameterTypes>>, TPath extends ZodObject<Record<string, ZodParameterTypes>>, TCookie extends ZodObject<Record<string, ZodParameterTypes>>, TBody extends z.ZodFirstPartySchemaTypes, TResponse extends LinzEndpoint["responses"]>(endpoint: {
+declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Record<string, ZodParameterTypes>>, THeader extends ZodObject<Record<string, ZodParameterTypes>>, TPath extends ZodObject<Record<string, ZodParameterTypes>>, TCookie extends ZodObject<Record<string, ZodParameterTypes>>, TBody extends RequestBody, TResponse extends LinzEndpoint["responses"]>(endpoint: {
     tags?: Tag[];
     summary?: string;
     description?: string;
@@ -55,7 +54,6 @@ declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Reco
         cookie?: TCookie;
     };
     requestBody?: TBody;
-    requestBodyType?: string;
     responses: TResponse;
     deprecated?: boolean;
     security?: Security<any>[];
@@ -64,7 +62,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Reco
         headers: z.infer<THeader>;
         params: z.infer<TPath>;
         cookies: z.infer<TCookie>;
-        body: z.infer<TBody>;
+        body: z.infer<TBody["body"]>;
     }>, extensions: TExt) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {
@@ -97,6 +95,43 @@ declare class ValidationError extends Error {
     readonly msg: Record<string, any>;
     constructor(msg: Record<string, any>);
 }
+declare abstract class RequestBody<B extends z.ZodType = any> {
+    abstract readonly body: B;
+    abstract mimeType(): string;
+}
+declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
+    readonly body: B;
+    constructor(body: B);
+    mimeType(): string;
+}
+declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
+    readonly body: B;
+    readonly encoding?: Record<K, {
+        contentType?: string[];
+        headers?: ZodObject<Record<string, ZodParameterTypes>>;
+        style?: string;
+        explode?: string;
+        allowReserved?: string;
+    }> | undefined;
+    constructor(body: B, encoding?: Record<K, {
+        contentType?: string[];
+        headers?: ZodObject<Record<string, ZodParameterTypes>>;
+        style?: string;
+        explode?: string;
+        allowReserved?: string;
+    }> | undefined);
+    mimeType(): string;
+}
+declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
+    readonly body: B;
+    constructor(body: B);
+    mimeType(): string;
+}
+declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
+    readonly body: B;
+    constructor(body: B);
+    mimeType(): string;
+}
 
 type OpenAPIDocsOptions = {
     vendor: "scalar";
@@ -126,4 +161,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, type BuilderConfig, type HTTPRequest, type HttpMethod, HttpResponse, type LinzEndpoint, type LinzEndpointGroup, METHODS, Security, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };
+export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };

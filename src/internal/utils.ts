@@ -6,7 +6,7 @@ export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonl
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
 
   const body = tryCatch(
-    () => validator.requestBody?.parse(req.body) || req.body,
+    () => validator.requestBody?.body.parse(req.body) || req.body,
     (err: any) => (errors["body"] = JSON.parse(err.message))
   );
   const queries = tryCatch(

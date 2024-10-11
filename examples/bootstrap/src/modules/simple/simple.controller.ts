@@ -1,4 +1,4 @@
-import { endpoint, LinzEndpointGroup } from "@apskhem/linz";
+import { endpoint, FormDataBody, JsonBody, LinzEndpointGroup } from "@apskhem/linz";
 import { applyGroupConfig } from "@apskhem/linz";
 import { z } from "zod";
 import * as fs from "fs";
@@ -24,9 +24,11 @@ const endpoints: LinzEndpointGroup = {
     }
   }),
   "post:/echo/simple/body": endpoint({
-    requestBody: z.object({
-      echo: z.string()
-    }),
+    requestBody: new JsonBody(
+      z.object({
+        echo: z.string()
+      })
+    ),
     responses: {
       201: z.object({
         body: z.string()
@@ -39,9 +41,11 @@ const endpoints: LinzEndpointGroup = {
     }
   }),
   "post:/echo/simple/void": endpoint({
-    requestBody: z.object({
-      echo: z.string()
-    }),
+    requestBody: new JsonBody(
+      z.object({
+        echo: z.string()
+      })
+    ),
     responses: {
       201: z.void(),
       404: true
@@ -52,11 +56,20 @@ const endpoints: LinzEndpointGroup = {
     }
   }),
   "post:/echo/simple/upload": endpoint({
-    requestBodyType: "multipart/form-data",
-    requestBody: z.object({
-      file: z.instanceof(File),
-      field: z.string()
-    }),
+    requestBody: new FormDataBody(
+      z.object({
+        file: z.instanceof(File),
+        field: z.string()
+      }),
+      {
+        file: {
+          contentType: ["image/png", "image/jpeg"],
+          headers: z.object({
+            "X-Custom-Header": z.string().describe("This is a custom header")
+          })
+        }
+      }
+    ),
     responses: {
       201: z.object({
         field: z.string()
