@@ -129,11 +129,12 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       }),
       ...(operationObject.requestBody && {
         requestBody: {
-          description: "[DUMMY]",
+          // TODO: add support for the `description` field.
           content: intoContentTypeRef(
             operationObject.requestBodyType || "application/json",
             requestBodySchemaName
-          )
+          ),
+          required: !operationObject.requestBody.isOptional()
         }
       }),
       responses: {
@@ -148,19 +149,18 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
                 : intoContentTypeRef("application/json", responseSchemaName)
           };
         }),
-        "400":
-          operationObject.requestBody || !isEmpty(operationObject.parameters)
-            ? {
-              description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",
-              content: intoContentTypeRef("application/json", VALIDATION_ERROR_COMPONENT_NAME)
-            }
-            : undefined!,
-        "401": operationObject.security?.length
-          ? {
+        ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
+          "400": {
+            description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",
+            content: intoContentTypeRef("application/json", VALIDATION_ERROR_COMPONENT_NAME)
+          }
+        }),
+        ...(operationObject.security?.length && {
+          "401": {
             description: getResponseStatusDesc(operationObject.responses, 401) || httpStatus[401],
             content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
           }
-          : undefined!,
+        }),
         "500": {
           description: getResponseStatusDesc(operationObject.responses, 500) || "Server unhandled or runtime error that may occur",
           content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
