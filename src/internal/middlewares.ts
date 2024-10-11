@@ -1,8 +1,6 @@
-import * as fs from "fs";
-
 import { NextFunction, Request, Response } from "express";
-import formidable from "formidable";
 import { mapValues } from "lodash";
+import * as multipart from "parse-multipart-data";
 
 import { responseExpressError } from "./utils";
 
@@ -29,30 +27,25 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
 
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE]?.startsWith("multipart/form-data")) {
-      const form = formidable({});
-      const [ fields, files ] = await form.parse(req);
+      const rawBody = Buffer.concat(bufferChunks);
 
+      const boundary = multipart.getBoundary(req.headers["content-type"]);
+      const parts = multipart.parse(rawBody, boundary);
+      
       // collect data
       const mergedItems = {} as Record<string, (string | File)[]>;
-      for (const [ key, values = [] ] of Object.entries(fields)) {
-        mergedItems[key] ??= [];
-        mergedItems[key]?.push(...values);
-      }
-      for (const [ key, values = [] ] of Object.entries(files)) {
-        mergedItems[key] ??= [];
+      for (const part of parts) {
+        if (!part.name) {
+          continue;
+        }
 
-        const formattedValues = values.map((v) => {
-          const buffer = fs.readFileSync(v.filepath);
-          const data = new Uint8Array(buffer);
-          const file = new File([ data ], v.originalFilename || v.newFilename, {
-            type: v.mimetype || ""
-          });
-          fs.rmSync(v.filepath);
+        const data = part.filename
+          ? new File([ part.data ], part.filename, {
+            type: part.type
+          })
+          : part.data.toString("utf-8");
 
-          return file;
-        });
-
-        mergedItems[key]?.push(...formattedValues);
+        (mergedItems[part.name] ??= []).push(data);
       }
 
       // validate

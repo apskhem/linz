@@ -1,6 +1,7 @@
 import { endpoint, LinzEndpointGroup } from "@apskhem/linz";
 import { applyGroupConfig } from "@apskhem/linz";
 import { z } from "zod";
+import * as fs from "fs";
 
 import { TAG } from "common/constants/values";
 
@@ -22,7 +23,7 @@ const endpoints: LinzEndpointGroup = {
       return { path: params.path };
     }
   }),
-  "post:/echo/e/body": endpoint({
+  "post:/echo/simple/body": endpoint({
     requestBody: z.object({
       echo: z.string()
     }),
@@ -37,7 +38,7 @@ const endpoints: LinzEndpointGroup = {
       return { body: body.echo };
     }
   }),
-  "post:/echo/e/void": endpoint({
+  "post:/echo/simple/void": endpoint({
     requestBody: z.object({
       echo: z.string()
     }),
@@ -48,6 +49,24 @@ const endpoints: LinzEndpointGroup = {
     operationId: "echoVoidSimple",
     handler: async ({ body }) => {
       return void {};
+    }
+  }),
+  "post:/echo/simple/upload": endpoint({
+    requestBodyType: "multipart/form-data",
+    requestBody: z.object({
+      file: z.instanceof(File),
+      field: z.string()
+    }),
+    responses: {
+      201: z.object({
+        field: z.string()
+      }),
+      404: true
+    },
+    operationId: "echoUploadSimple",
+    handler: async ({ body }) => {
+      fs.writeFileSync(body.file.name, new Uint8Array(await body.file.slice().arrayBuffer()))
+      return { field: body.field };
     }
   })
 };
