@@ -129,7 +129,9 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       }),
       ...(operationObject.requestBody && {
         requestBody: {
-          // TODO: add support for the `description` field.
+          ...(operationObject.requestBody.description && {
+            description: operationObject.requestBody.description
+          }),
           content: intoContentTypeRef(
             operationObject.requestBody.mimeType(),
             requestBodySchemaName,

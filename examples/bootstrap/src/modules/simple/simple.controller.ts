@@ -45,7 +45,7 @@ const endpoints: LinzEndpointGroup = {
       z.object({
         echo: z.string()
       })
-    ),
+    ).describe("Echo void result"),
     responses: {
       201: z.void(),
       404: true

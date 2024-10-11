@@ -96,8 +96,11 @@ declare class ValidationError extends Error {
     constructor(msg: Record<string, any>);
 }
 declare abstract class RequestBody<B extends z.ZodType = any> {
+    private _desc;
     abstract readonly body: B;
     abstract mimeType(): string;
+    describe(description: string): this;
+    get description(): string | null;
 }
 declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
     readonly body: B;

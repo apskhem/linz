@@ -141,8 +141,19 @@ export class ValidationError extends Error {
 }
 
 abstract class RequestBody<B extends z.ZodType = any> {
+  private _desc: string | null = null;
+
   abstract readonly body: B;
   abstract mimeType(): string;
+
+  describe(description: string): this {
+    this._desc = description;
+    return this;
+  }
+
+  get description(): string | null {
+    return this._desc;
+  }
 }
 
 export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
