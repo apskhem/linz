@@ -15,6 +15,13 @@ type ZodParameterTypes =
 
 type Extensions = Record<string, any>;
 type Tag = OpenAPIV3.TagObject;
+type EncodingItem = {
+  contentType?: string[],
+  headers?: ZodObject<Record<string, ZodParameterTypes>>,
+  style?: string,
+  explode?: string,
+  allowReserved?: string,
+};
 
 export type LinzEndpoint = {
   tags?: Tag[];
@@ -27,6 +34,7 @@ export type LinzEndpoint = {
     path?: ZodObject<Record<string, ZodParameterTypes>>;
     cookie?: ZodObject<Record<string, ZodParameterTypes>>;
   };
+  // note: short-hand applicable
   requestBody?: RequestBody;
   responses: {
     [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
@@ -63,11 +71,11 @@ export type HTTPRequest = {
 
 export function endpoint<
   TExt extends Extensions,
-  TQuery extends ZodObject<Record<string, ZodParameterTypes>>,
-  THeader extends ZodObject<Record<string, ZodParameterTypes>>,
-  TPath extends ZodObject<Record<string, ZodParameterTypes>>,
-  TCookie extends ZodObject<Record<string, ZodParameterTypes>>,
-  TBody extends RequestBody,
+  TQuery extends NonNullable<Required<LinzEndpoint>["parameters"]["query"]>,
+  THeader extends NonNullable<Required<LinzEndpoint>["parameters"]["header"]>,
+  TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>,
+  TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>,
+  TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0],
   TResponse extends LinzEndpoint["responses"]
 >(endpoint: {
   tags?: Tag[];
@@ -90,12 +98,17 @@ export function endpoint<
       headers: z.infer<THeader>
       params: z.infer<TPath>
       cookies: z.infer<TCookie>
-      body: z.infer<TBody["body"]>;
+      body: z.infer<TBody extends RequestBody ? TBody["body"] : TBody>
     }>,
     extensions: TExt
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {
-  return endpoint as any;
+  return {
+    ...endpoint,
+    ...(endpoint.requestBody && !(endpoint.requestBody instanceof RequestBody) && {
+      requestBody: new JsonBody(endpoint.requestBody)
+    })
+  } as LinzEndpoint;
 }
 
 export class HttpResponse<T> {
@@ -178,13 +191,7 @@ export class FormDataBody<
 
   constructor(
     public readonly body: B,
-    public readonly encoding?: Record<K, {
-      contentType?: string[],
-      headers?: ZodObject<Record<string, ZodParameterTypes>>,
-      style?: string,
-      explode?: string,
-      allowReserved?: string,
-    }>
+    public readonly encoding?: Record<K, Readonly<EncodingItem>>
   ) {
     super();
   }
@@ -194,11 +201,15 @@ export class FormDataBody<
   }
 }
 
-export class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
+export class UrlEncodedBody<
+  B extends ZodObject<Record<string, ZodParameterTypes>> = any,
+  K extends keyof z.infer<B> = any
+> extends RequestBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";
 
   constructor(
-    public readonly body: B
+    public readonly body: B,
+    public readonly encoding?: Record<K, Readonly<EncodingItem>>
   ) {
     super();
   }

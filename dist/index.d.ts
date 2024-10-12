@@ -6,6 +6,13 @@ import { Express } from 'express';
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
 type Extensions = Record<string, any>;
 type Tag = OpenAPIV3.TagObject;
+type EncodingItem = {
+    contentType?: string[];
+    headers?: ZodObject<Record<string, ZodParameterTypes>>;
+    style?: string;
+    explode?: string;
+    allowReserved?: string;
+};
 type LinzEndpoint = {
     tags?: Tag[];
     summary?: string;
@@ -42,7 +49,7 @@ type HTTPRequest = {
     headers: Record<string, string>;
     cookies: Record<string, string>;
 };
-declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Record<string, ZodParameterTypes>>, THeader extends ZodObject<Record<string, ZodParameterTypes>>, TPath extends ZodObject<Record<string, ZodParameterTypes>>, TCookie extends ZodObject<Record<string, ZodParameterTypes>>, TBody extends RequestBody, TResponse extends LinzEndpoint["responses"]>(endpoint: {
+declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Required<LinzEndpoint>["parameters"]["query"]>, THeader extends NonNullable<Required<LinzEndpoint>["parameters"]["header"]>, TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>, TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>, TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0], TResponse extends LinzEndpoint["responses"]>(endpoint: {
     tags?: Tag[];
     summary?: string;
     description?: string;
@@ -62,7 +69,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends ZodObject<Reco
         headers: z.infer<THeader>;
         params: z.infer<TPath>;
         cookies: z.infer<TCookie>;
-        body: z.infer<TBody["body"]>;
+        body: z.infer<TBody extends RequestBody ? TBody["body"] : TBody>;
     }>, extensions: TExt) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {
@@ -110,27 +117,16 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Reque
 }
 declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
     readonly body: B;
-    readonly encoding?: Record<K, {
-        contentType?: string[];
-        headers?: ZodObject<Record<string, ZodParameterTypes>>;
-        style?: string;
-        explode?: string;
-        allowReserved?: string;
-    }> | undefined;
+    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "multipart/form-data";
-    constructor(body: B, encoding?: Record<K, {
-        contentType?: string[];
-        headers?: ZodObject<Record<string, ZodParameterTypes>>;
-        style?: string;
-        explode?: string;
-        allowReserved?: string;
-    }> | undefined);
+    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
+declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
     readonly body: B;
+    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "application/x-www-form-urlencoded";
-    constructor(body: B);
+    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
     get mimeType(): string;
 }
 declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {

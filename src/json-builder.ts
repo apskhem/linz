@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
 
-import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, Security } from ".";
+import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, Security, UrlEncodedBody } from ".";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -136,7 +136,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
             operationObject.requestBody.mimeType,
             requestBodySchemaName,
             operationObject.requestBody.body._def.typeName === z.ZodVoid.name as any,
-            operationObject.requestBody instanceof FormDataBody
+            operationObject.requestBody instanceof FormDataBody || operationObject.requestBody instanceof UrlEncodedBody
               ? operationObject.requestBody.encoding
               : undefined
           ),
