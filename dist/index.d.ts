@@ -115,7 +115,7 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Reque
     constructor(body: B);
     get mimeType(): string;
 }
-declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
+declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "multipart/form-data";

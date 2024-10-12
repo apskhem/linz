@@ -184,7 +184,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Reques
 }
 
 export class FormDataBody<
-  B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any,
+  B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any,
   K extends keyof z.infer<B> = any
 > extends RequestBody<B> {
   static readonly mimeType = "multipart/form-data";
