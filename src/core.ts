@@ -144,7 +144,7 @@ abstract class RequestBody<B extends z.ZodType = any> {
   private _desc: string | null = null;
 
   abstract readonly body: B;
-  abstract mimeType(): string;
+  abstract mimeType: string;
 
   describe(description: string): this {
     this._desc = description;
@@ -157,14 +157,16 @@ abstract class RequestBody<B extends z.ZodType = any> {
 }
 
 export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
+  static readonly mimeType = "application/json";
+
   constructor(
     public readonly body: B
   ) {
     super();
   }
 
-  override mimeType(): string {
-    return "application/json";
+  override get mimeType(): string {
+    return JsonBody.mimeType;
   }
 }
 
@@ -172,6 +174,8 @@ export class FormDataBody<
   B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any,
   K extends keyof z.infer<B> = any
 > extends RequestBody<B> {
+  static readonly mimeType = "multipart/form-data";
+
   constructor(
     public readonly body: B,
     public readonly encoding?: Record<K, {
@@ -185,31 +189,35 @@ export class FormDataBody<
     super();
   }
 
-  override mimeType(): string {
-    return "multipart/form-data";
+  override get mimeType(): string {
+    return FormDataBody.mimeType;
   }
 }
 
 export class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
+  static readonly mimeType = "application/x-www-form-urlencoded";
+
   constructor(
     public readonly body: B
   ) {
     super();
   }
 
-  override mimeType(): string {
-    return "application/x-www-form-urlencoded";
+  override get mimeType(): string {
+    return UrlEncodedBody.mimeType;
   }
 }
 
 export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
+  static readonly mimeType = "application/octet-stream";
+
   constructor(
     public readonly body: B
   ) {
     super();
   }
 
-  override mimeType(): string {
-    return "application/octet-stream";
+  override get mimeType(): string {
+    return OctetStreamBody.mimeType;
   }
 }

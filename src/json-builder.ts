@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
 
-import { FormDataBody, LinzEndpoint, LinzEndpointGroup, Security } from ".";
+import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, Security } from ".";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -133,7 +133,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
             description: operationObject.requestBody.description
           }),
           content: intoContentTypeRef(
-            operationObject.requestBody.mimeType(),
+            operationObject.requestBody.mimeType,
             requestBodySchemaName,
             operationObject.requestBody.body._def.typeName === z.ZodVoid.name as any,
             operationObject.requestBody instanceof FormDataBody
@@ -151,25 +151,25 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
               || "No description",
             content:
               typeof v === "boolean" || typeof v === "string"
-                ? intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
-                : intoContentTypeRef("application/json", responseSchemaName, v?._def.typeName === z.ZodVoid.name)
+                ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
+                : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?._def.typeName === z.ZodVoid.name)
           };
         }),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
             description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",
-            content: intoContentTypeRef("application/json", VALIDATION_ERROR_COMPONENT_NAME)
+            content: intoContentTypeRef(JsonBody.mimeType, VALIDATION_ERROR_COMPONENT_NAME)
           }
         }),
         ...(operationObject.security?.length && {
           "401": {
             description: getResponseStatusDesc(operationObject.responses, 401) || httpStatus[401],
-            content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
+            content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
           }
         }),
         "500": {
           description: getResponseStatusDesc(operationObject.responses, 500) || "Server unhandled or runtime error that may occur",
-          content: intoContentTypeRef("application/json", GENERAL_API_ERROR_COMPONENT_NAME)
+          content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
         }
       }
     };

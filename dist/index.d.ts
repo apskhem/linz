@@ -98,14 +98,15 @@ declare class ValidationError extends Error {
 declare abstract class RequestBody<B extends z.ZodType = any> {
     private _desc;
     abstract readonly body: B;
-    abstract mimeType(): string;
+    abstract mimeType: string;
     describe(description: string): this;
     get description(): string | null;
 }
 declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
     readonly body: B;
+    static readonly mimeType = "application/json";
     constructor(body: B);
-    mimeType(): string;
+    get mimeType(): string;
 }
 declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
     readonly body: B;
@@ -116,6 +117,7 @@ declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.Zo
         explode?: string;
         allowReserved?: string;
     }> | undefined;
+    static readonly mimeType = "multipart/form-data";
     constructor(body: B, encoding?: Record<K, {
         contentType?: string[];
         headers?: ZodObject<Record<string, ZodParameterTypes>>;
@@ -123,17 +125,19 @@ declare class FormDataBody<B extends ZodObject<Record<string, z.ZodString | z.Zo
         explode?: string;
         allowReserved?: string;
     }> | undefined);
-    mimeType(): string;
+    get mimeType(): string;
 }
 declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any> extends RequestBody<B> {
     readonly body: B;
+    static readonly mimeType = "application/x-www-form-urlencoded";
     constructor(body: B);
-    mimeType(): string;
+    get mimeType(): string;
 }
 declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
     readonly body: B;
+    static readonly mimeType = "application/octet-stream";
     constructor(body: B);
-    mimeType(): string;
+    get mimeType(): string;
 }
 
 type OpenAPIDocsOptions = {
