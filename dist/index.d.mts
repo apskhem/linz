@@ -24,7 +24,7 @@ type LinzEndpoint = {
         path?: ZodObject<Record<string, ZodParameterTypes>>;
         cookie?: ZodObject<Record<string, ZodParameterTypes>>;
     };
-    requestBody?: RequestBody;
+    requestBody?: SenderBody;
     responses: {
         [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
         default?: z.ZodFirstPartySchemaTypes;
@@ -69,7 +69,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
         headers: z.infer<THeader>;
         params: z.infer<TPath>;
         cookies: z.infer<TCookie>;
-        body: z.infer<TBody extends RequestBody ? TBody["body"] : TBody>;
+        body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
     }>, extensions: TExt) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {
@@ -102,37 +102,43 @@ declare class ValidationError extends Error {
     readonly msg: Record<string, any>;
     constructor(msg: Record<string, any>);
 }
-declare abstract class RequestBody<B extends z.ZodType = any> {
-    private _desc;
+declare abstract class SenderBody<B extends z.ZodType = any> {
+    private _description;
+    private _headers;
+    private _examples;
     abstract readonly body: B;
     abstract mimeType: string;
-    describe(description: string): this;
-    get description(): string | null;
+    describe(description: SenderBody["_description"]): this;
+    get description(): SenderBody["_description"];
+    requireHeaders(headers: SenderBody["_headers"]): this;
+    get requiredHeaders(): SenderBody["_headers"];
+    setExamples(examples: SenderBody["_examples"]): this;
+    getExamples(): SenderBody["_examples"];
 }
-declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
+declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType = "application/json";
     constructor(body: B);
     get mimeType(): string;
 }
-declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
+declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "multipart/form-data";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends RequestBody<B> {
+declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "application/x-www-form-urlencoded";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
     get mimeType(): string;
 }
-declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
+declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType = "application/octet-stream";
-    constructor(body: B);
+    constructor(body?: B);
     get mimeType(): string;
 }
 
