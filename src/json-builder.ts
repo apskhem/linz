@@ -151,7 +151,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           content:
             typeof v === "boolean" || typeof v === "string"
               ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-              : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?.body._def.typeName === z.ZodVoid.name)
+              : intoContentTypeRef(v!.mimeType, responseSchemaName, v?.body._def.typeName === z.ZodVoid.name)
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
