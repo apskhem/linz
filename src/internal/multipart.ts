@@ -156,7 +156,7 @@ function process(part: Part): Input {
   return input as Input;
 }
 
-function generateBoundary(prefix = "----------------------"): string {
+export function generateBoundary(prefix = "----------------------"): string {
   return `--${prefix}${randomBytes(12).toString("hex")}`;
 }
 

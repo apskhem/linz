@@ -7,6 +7,7 @@ import { SCALAR_TEMPLATE } from "templates";
 
 import {
   ApiError,
+  FormDataBody,
   type HttpMethod,
   HttpResponse,
   type LinzEndpointGroup,
@@ -108,6 +109,14 @@ export function initExpress(
               .header(result.payload.headers)
               .status(usedStatus)
               .end();
+          } else if (responseValidator instanceof FormDataBody) {
+            const [ mimeType, body ] = await responseValidator.serializeWithContentType(result.payload.body);
+
+            res
+              .contentType(mimeType)
+              .header(result.payload.headers)
+              .status(usedStatus)
+              .send(body);
           } else {
             res
               .contentType(responseValidator.mimeType)

@@ -133,14 +133,15 @@ declare class FormDataBody<B extends z.ZodObject<Record<string, z.ZodArray<FormD
     static readonly mimeType = "multipart/form-data";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
     serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    serializeWithContentType<T extends z.TypeOf<B>>(data: T): Promise<[string, Buffer]>;
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends z.ZodObject<Record<string, z.ZodTuple<[ZodParameterTypes, ...ZodParameterTypes[]]> | ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class UrlEncodedBody<B extends z.ZodObject<Record<string, z.ZodTuple<[ZodParameterTypes, ...ZodParameterTypes[]]> | ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "application/x-www-form-urlencoded";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
 declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {

@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import { mapValues } from "lodash";
 
 import * as multipart from "./multipart";
 import { responseExpressError } from "./utils";
@@ -37,7 +36,6 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
 
       const parts = multipart.parse(rawBody, boundary);
       
-      // collect data
       const mergedItems = {} as Record<string, (string | File)[]>;
       for (const part of parts) {
         if (!part.name) {

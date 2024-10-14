@@ -1,4 +1,4 @@
-import { encode } from "internal/multipart";
+import { encode, generateBoundary } from "internal/multipart";
 import { mapValues } from "lodash";
 import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
 import z from "zod";
@@ -247,6 +247,18 @@ export class FormDataBody<
     );
   }
 
+  async serializeWithContentType<T extends z.TypeOf<B>>(data: T): Promise<[string, Buffer]> {
+    const boundary = generateBoundary();
+
+    return [
+      `${FormDataBody.mimeType}; boundary=${boundary}`,
+      await encode(
+        mapValues(data, (vx) => vx.map((vy) => vy instanceof File ? vy : String(vy))),
+        boundary
+      )
+    ];
+  }
+
   override get mimeType(): string {
     return FormDataBody.mimeType;
   }
@@ -255,8 +267,8 @@ export class FormDataBody<
 export class UrlEncodedBody<
   B extends z.ZodObject<
     Record<string, z.ZodTuple<[ZodParameterTypes, ...ZodParameterTypes[]]> | ZodParameterTypes>
-  >
-    | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
+    // FIXME: should also accept `URLSearchParams`?
+  > = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";
@@ -268,7 +280,7 @@ export class UrlEncodedBody<
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+  override async serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<Buffer> {
     return Buffer.from(
       new URLSearchParams(data instanceof URLSearchParams ? data : mapValues(data, (v) => String(v))).toString()
     );
