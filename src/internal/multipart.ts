@@ -169,16 +169,17 @@ export async function encode(data: Record<string, (string | File)[]>, boundary =
 
       if (typeof value === "string") {
         multipartFragments.push(
-          Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`)
+          Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n`),
+          Buffer.from(value),
+          Buffer.from("\r\n")
         );
       } else if (value instanceof File) {
         multipartFragments.push(
           Buffer.from(`Content-Disposition: form-data; name="${key}"; filename="${value.name}"\r\n`),
-          Buffer.from(`Content-Type: ${value.type || "application/octet-stream"}\r\n\r\n`)
+          Buffer.from(`Content-Type: ${value.type || "application/octet-stream"}\r\n\r\n`),
+          Buffer.from(await value.arrayBuffer()),
+          Buffer.from("\r\n")
         );
-
-        multipartFragments.push(Buffer.from(await value.arrayBuffer()));
-        multipartFragments.push(Buffer.from("\r\n"));
       }
     }
   }
