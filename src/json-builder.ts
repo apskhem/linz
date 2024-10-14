@@ -144,17 +144,15 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         }
       }),
       responses: {
-        ...mapValues(operationObject.responses, (v, k) => {
-          return {
-            description: (typeof v === "string" ? v : null)
-              || httpStatus[`${k}` as keyof typeof httpStatus].toString()
-              || "No description",
-            content:
-              typeof v === "boolean" || typeof v === "string"
-                ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-                : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?._def.typeName === z.ZodVoid.name)
-          };
-        }),
+        ...mapValues(operationObject.responses, (v, k) => ({
+          description: (typeof v === "string" ? v : null)
+            || String(httpStatus[`${k}` as keyof typeof httpStatus])
+            || "No description",
+          content:
+            typeof v === "boolean" || typeof v === "string"
+              ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
+              : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?._def.typeName === z.ZodVoid.name)
+        })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
             description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",

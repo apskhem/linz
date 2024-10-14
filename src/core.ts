@@ -1,4 +1,5 @@
 import type { OpenAPIV3 } from "openapi-types";
+import { ExampleObject } from "openapi3-ts";
 import z, { type ZodObject, type ZodType } from "zod";
 
 type ZodParameterTypes =
@@ -35,7 +36,7 @@ export type LinzEndpoint = {
     cookie?: ZodObject<Record<string, ZodParameterTypes>>;
   };
   // note: short-hand applicable
-  requestBody?: RequestBody;
+  requestBody?: SenderBody;
   responses: {
     [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
     default?: z.ZodFirstPartySchemaTypes;
@@ -98,14 +99,14 @@ export function endpoint<
       headers: z.infer<THeader>
       params: z.infer<TPath>
       cookies: z.infer<TCookie>
-      body: z.infer<TBody extends RequestBody ? TBody["body"] : TBody>
+      body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>
     }>,
     extensions: TExt
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {
   return {
     ...endpoint,
-    ...(endpoint.requestBody && !(endpoint.requestBody instanceof RequestBody) && {
+    ...(endpoint.requestBody && !(endpoint.requestBody instanceof SenderBody) && {
       requestBody: new JsonBody(endpoint.requestBody)
     })
   } as LinzEndpoint;
@@ -153,23 +154,46 @@ export class ValidationError extends Error {
   }
 }
 
-abstract class RequestBody<B extends z.ZodType = any> {
-  private _desc: string | null = null;
+abstract class SenderBody<B extends z.ZodType = any> {
+  /** for both `RequestBodyObject` and `ResponseObject` */
+  private _description: string | null = null;
+  /** for `ResponseObject` */
+  private _headers: ZodObject<Record<string, ZodParameterTypes>> | null = null;
+  /** for both `RequestBodyObject` and `ResponseObject` */
+  private _examples: Record<string, ExampleObject> | null = null;
 
   abstract readonly body: B;
   abstract mimeType: string;
 
-  describe(description: string): this {
-    this._desc = description;
+  describe(description: SenderBody["_description"]): this {
+    this._description = description;
     return this;
   }
 
-  get description(): string | null {
-    return this._desc;
+  get description(): SenderBody["_description"] {
+    return this._description;
+  }
+
+  requireHeaders(headers: SenderBody["_headers"]): this {
+    this._headers = headers;
+    return this;
+  }
+
+  get requiredHeaders(): SenderBody["_headers"] {
+    return this._headers;
+  }
+
+  setExamples(examples: SenderBody["_examples"]): this {
+    this._examples = examples;
+    return this;
+  }
+
+  getExamples(): SenderBody["_examples"] {
+    return this._examples;
   }
 }
 
-export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends RequestBody<B> {
+export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
   static readonly mimeType = "application/json";
 
   constructor(
@@ -186,7 +210,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Reques
 export class FormDataBody<
   B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any,
   K extends keyof z.infer<B> = any
-> extends RequestBody<B> {
+> extends SenderBody<B> {
   static readonly mimeType = "multipart/form-data";
 
   constructor(
@@ -204,7 +228,7 @@ export class FormDataBody<
 export class UrlEncodedBody<
   B extends ZodObject<Record<string, ZodParameterTypes>> = any,
   K extends keyof z.infer<B> = any
-> extends RequestBody<B> {
+> extends SenderBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";
 
   constructor(
@@ -219,11 +243,11 @@ export class UrlEncodedBody<
   }
 }
 
-export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends RequestBody<B> {
+export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
   static readonly mimeType = "application/octet-stream";
 
   constructor(
-    public readonly body: B
+    public readonly body: B = z.instanceof(Buffer) as B
   ) {
     super();
   }
