@@ -1,5 +1,5 @@
 import { OpenAPIV3 } from 'openapi-types';
-import z, { ZodObject, ZodType } from 'zod';
+import z from 'zod';
 import { CorsOptions } from 'cors';
 import { Express } from 'express';
 
@@ -8,7 +8,7 @@ type Extensions = Record<string, any>;
 type Tag = OpenAPIV3.TagObject;
 type EncodingItem = {
     contentType?: string[];
-    headers?: ZodObject<Record<string, ZodParameterTypes>>;
+    headers?: z.ZodObject<Record<string, ZodParameterTypes>>;
     style?: string;
     explode?: string;
     allowReserved?: string;
@@ -19,10 +19,10 @@ type LinzEndpoint = {
     description?: string;
     operationId: string;
     parameters?: {
-        query?: ZodObject<Record<string, ZodParameterTypes>>;
-        header?: ZodObject<Record<string, ZodParameterTypes>>;
-        path?: ZodObject<Record<string, ZodParameterTypes>>;
-        cookie?: ZodObject<Record<string, ZodParameterTypes>>;
+        query?: z.ZodObject<Record<string, ZodParameterTypes>>;
+        header?: z.ZodObject<Record<string, ZodParameterTypes>>;
+        path?: z.ZodObject<Record<string, ZodParameterTypes>>;
+        cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
     };
     requestBody?: SenderBody;
     responses: {
@@ -37,7 +37,7 @@ type MergeRecordType<T, U> = {
     [K in keyof T]: T[K] | U;
 };
 type MergeZodValues<T> = {
-    [K in keyof T]: T[K] extends ZodType ? z.infer<T[K]> : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never);
+    [K in keyof T]: T[K] extends z.ZodType ? z.infer<T[K]> : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never);
 }[keyof T];
 type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>> = MergeZodValues<T> extends infer R ? R : never;
 declare const METHODS: readonly ["get", "post", "put", "patch", "delete"];
@@ -126,7 +126,7 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sende
     serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
-declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class FormDataBody<B extends z.ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "multipart/form-data";
@@ -134,7 +134,7 @@ declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes 
     serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "application/x-www-form-urlencoded";

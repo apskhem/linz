@@ -1,8 +1,7 @@
-import { FormDataEncoder } from "form-data-encoder";
-import { FormData, File as FormDataFile } from "formdata-node";
+import { encode } from "internal/multipart";
 import { mapValues } from "lodash";
-import type { OpenAPIV3 } from "openapi-types";
-import z, { type ZodObject, type ZodType } from "zod";
+import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
+import z from "zod";
 
 type ZodParameterTypes =
   | z.ZodString
@@ -17,10 +16,10 @@ type ZodParameterTypes =
   | z.ZodNullable<ZodParameterTypes>;
 
 type Extensions = Record<string, any>;
-type Tag = OpenAPIV3.TagObject;
+type Tag = OpenAPIType.TagObject;
 type EncodingItem = {
   contentType?: string[],
-  headers?: ZodObject<Record<string, ZodParameterTypes>>,
+  headers?: z.ZodObject<Record<string, ZodParameterTypes>>,
   style?: string,
   explode?: string,
   allowReserved?: string,
@@ -32,10 +31,10 @@ export type LinzEndpoint = {
   description?: string;
   operationId: string;
   parameters?: {
-    query?: ZodObject<Record<string, ZodParameterTypes>>;
-    header?: ZodObject<Record<string, ZodParameterTypes>>;
-    path?: ZodObject<Record<string, ZodParameterTypes>>;
-    cookie?: ZodObject<Record<string, ZodParameterTypes>>;
+    query?: z.ZodObject<Record<string, ZodParameterTypes>>;
+    header?: z.ZodObject<Record<string, ZodParameterTypes>>;
+    path?: z.ZodObject<Record<string, ZodParameterTypes>>;
+    cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
   };
   // note: short-hand applicable
   requestBody?: SenderBody;
@@ -56,7 +55,7 @@ type MergeRecordType<T, U> = {
   [K in keyof T]: T[K] | U;
 };
 type MergeZodValues<T> = {
-  [K in keyof T]: T[K] extends ZodType
+  [K in keyof T]: T[K] extends z.ZodType
     ? z.infer<T[K]>
     : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never)
 }[keyof T];
@@ -134,7 +133,7 @@ export class HttpResponse<T> {
   ) {}
 }
 
-type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
+type SecurityConfig = OpenAPIType.SecuritySchemeObject & {
   name: string;
   handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<void>;
 };
@@ -170,9 +169,9 @@ abstract class SenderBody<B extends z.ZodType = any> {
   /** for both `RequestBodyObject` and `ResponseObject` */
   private _description: string | null = null;
   /** for `ResponseObject` */
-  private _headers: ZodObject<Record<string, ZodParameterTypes>> | null = null;
+  private _headers: z.ZodObject<Record<string, ZodParameterTypes>> | null = null;
   /** for both `RequestBodyObject` and `ResponseObject` */
-  private _examples: Record<string, OpenAPIV3.ExampleObject> | null = null;
+  private _examples: Record<string, OpenAPIType.ExampleObject> | null = null;
 
   abstract readonly body: B;
   abstract mimeType: string;
@@ -226,7 +225,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
 }
 
 export class FormDataBody<
-  B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any,
+  B extends z.ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "multipart/form-data";
@@ -239,22 +238,7 @@ export class FormDataBody<
   }
 
   override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    const form = new FormData();
-    
-    for (const [ k, v ] of Object.entries(data)) {
-      if (v instanceof File) {
-        form.set(k, new FormDataFile([ v.slice() ], v.name, { type: v.type }), v.name);
-      } else {
-        form.set(k, String(v));
-      }
-    }
-
-    const chunks: Uint8Array[] = [];
-    for await (const chunk of new FormDataEncoder(form).encode()) {
-      chunks.push(Buffer.from(chunk));
-    }
-
-    return Buffer.concat(chunks);
+    return encode(mapValues(data, (v) => [ v instanceof File ? v : String(v) ]));
   }
 
   override get mimeType(): string {
@@ -263,7 +247,7 @@ export class FormDataBody<
 }
 
 export class UrlEncodedBody<
-  B extends ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
+  B extends z.ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";

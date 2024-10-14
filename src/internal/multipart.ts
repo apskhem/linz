@@ -16,6 +16,8 @@
  *  or { name: 'key', data: <Buffer 41 41 41 41 42 42 42 42> }
  */
 
+import { randomBytes } from "crypto";
+
 type Part = {
   headers: Record<string, string>;
   part: number[]
@@ -152,4 +154,36 @@ function process(part: Part): Input {
   }
 
   return input as Input;
+}
+
+function generateBoundary(prefix = "----------------------"): string {
+  return `--${prefix}${randomBytes(12).toString("hex")}`;
+}
+
+export async function encode(data: Record<string, (string | File)[]>, boundary = generateBoundary()): Promise<Buffer> {
+  const multipartFragments: Buffer[] = [];
+
+  for (const [ key, values ] of Object.entries(data)) {
+    for (const value of values) {
+      multipartFragments.push(Buffer.from(`--${boundary}`));
+
+      if (typeof value === "string") {
+        multipartFragments.push(
+          Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`)
+        );
+      } else if (value instanceof File) {
+        multipartFragments.push(
+          Buffer.from(`Content-Disposition: form-data; name="${key}"; filename="${value.name}"\r\n`),
+          Buffer.from(`Content-Type: ${value.type || "application/octet-stream"}\r\n\r\n`)
+        );
+
+        multipartFragments.push(Buffer.from(await value.arrayBuffer()));
+        multipartFragments.push(Buffer.from("\r\n"));
+      }
+    }
+  }
+
+  multipartFragments.push(Buffer.from(`--${boundary}--\r\n`));
+
+  return Buffer.concat(multipartFragments);
 }
