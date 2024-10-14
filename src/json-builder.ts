@@ -1,6 +1,6 @@
 import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
-import { isEmpty, keyBy, mapValues, omit, upperFirst } from "lodash";
+import { isEmpty, keyBy, mapValues, omit, pickBy, upperFirst } from "lodash";
 import { OpenAPIV3 } from "openapi-types";
 import { z } from "zod";
 
@@ -144,14 +144,14 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         }
       }),
       responses: {
-        ...mapValues(operationObject.responses, (v, k) => ({
+        ...mapValues(pickBy(operationObject.responses, (v) => typeof v !== "undefined"), (v, k) => ({
           description: (typeof v === "string" ? v : null)
             || String(httpStatus[`${k}` as keyof typeof httpStatus])
             || "No description",
           content:
             typeof v === "boolean" || typeof v === "string"
               ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-              : intoContentTypeRef(v?.mimeType ?? JsonBody.mimeType, responseSchemaName, v?.body._def.typeName === z.ZodVoid.name)
+              : intoContentTypeRef(v.mimeType, responseSchemaName, v.body._def.typeName === z.ZodVoid.name)
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
