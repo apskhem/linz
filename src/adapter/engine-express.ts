@@ -88,7 +88,7 @@ export function initExpress(
         }
 
         try {
-          responseValidator.parse(result.payload.body);
+          responseValidator.body.parse(result.payload.body);
         } catch (err) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"

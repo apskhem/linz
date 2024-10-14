@@ -1,5 +1,5 @@
+import { mapValues } from "lodash";
 import type { OpenAPIV3 } from "openapi-types";
-import { ExampleObject } from "openapi3-ts";
 import z, { type ZodObject, type ZodType } from "zod";
 
 type ZodParameterTypes =
@@ -37,9 +37,10 @@ export type LinzEndpoint = {
   };
   // note: short-hand applicable
   requestBody?: SenderBody;
+  // note: short-hand applicable
   responses: {
-    [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
-    default?: z.ZodFirstPartySchemaTypes;
+    [status: number]: SenderBody | boolean | string;
+    default?: SenderBody;
   };
   deprecated?: boolean;
   security?: Security<any>[];
@@ -49,10 +50,16 @@ export type LinzEndpoint = {
   ) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 
-type MergeNonBooleanValues<T> = {
-  [K in keyof T]: T[K] extends ZodType ? z.infer<T[K]> : never
+type MergeRecordType<T, U> = {
+  [K in keyof T]: T[K] | U;
+};
+type MergeZodValues<T> = {
+  [K in keyof T]: T[K] extends ZodType
+    ? z.infer<T[K]>
+    : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never)
 }[keyof T];
-type MergedResponse<T extends LinzEndpoint["responses"]> = MergeNonBooleanValues<T> extends infer R ? R : never;
+type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>>
+  = MergeZodValues<T> extends infer R ? R : never;
 
 export const METHODS = [ "get", "post", "put", "patch", "delete" ] as const;
 
@@ -77,7 +84,7 @@ export function endpoint<
   TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>,
   TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>,
   TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0],
-  TResponse extends LinzEndpoint["responses"]
+  TResponse extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>
 >(endpoint: {
   tags?: Tag[];
   summary?: string;
@@ -108,7 +115,10 @@ export function endpoint<
     ...endpoint,
     ...(endpoint.requestBody && !(endpoint.requestBody instanceof SenderBody) && {
       requestBody: new JsonBody(endpoint.requestBody)
-    })
+    }),
+    responses: mapValues(endpoint.responses, (v) => (
+      v instanceof z.ZodType ? new JsonBody(v) : v
+    ))
   } as LinzEndpoint;
 }
 
@@ -160,7 +170,7 @@ abstract class SenderBody<B extends z.ZodType = any> {
   /** for `ResponseObject` */
   private _headers: ZodObject<Record<string, ZodParameterTypes>> | null = null;
   /** for both `RequestBodyObject` and `ResponseObject` */
-  private _examples: Record<string, ExampleObject> | null = null;
+  private _examples: Record<string, OpenAPIV3.ExampleObject> | null = null;
 
   abstract readonly body: B;
   abstract mimeType: string;

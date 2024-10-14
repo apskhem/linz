@@ -26,17 +26,20 @@ type LinzEndpoint = {
     };
     requestBody?: SenderBody;
     responses: {
-        [status: number]: z.ZodFirstPartySchemaTypes | boolean | string;
-        default?: z.ZodFirstPartySchemaTypes;
+        [status: number]: SenderBody | boolean | string;
+        default?: SenderBody;
     };
     deprecated?: boolean;
     security?: Security<any>[];
     handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
-type MergeNonBooleanValues<T> = {
-    [K in keyof T]: T[K] extends ZodType ? z.infer<T[K]> : never;
+type MergeRecordType<T, U> = {
+    [K in keyof T]: T[K] | U;
+};
+type MergeZodValues<T> = {
+    [K in keyof T]: T[K] extends ZodType ? z.infer<T[K]> : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never);
 }[keyof T];
-type MergedResponse<T extends LinzEndpoint["responses"]> = MergeNonBooleanValues<T> extends infer R ? R : never;
+type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>> = MergeZodValues<T> extends infer R ? R : never;
 declare const METHODS: readonly ["get", "post", "put", "patch", "delete"];
 type HttpMethod = (typeof METHODS)[number];
 type LinzEndpointGroup = {
@@ -49,7 +52,7 @@ type HTTPRequest = {
     headers: Record<string, string>;
     cookies: Record<string, string>;
 };
-declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Required<LinzEndpoint>["parameters"]["query"]>, THeader extends NonNullable<Required<LinzEndpoint>["parameters"]["header"]>, TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>, TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>, TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0], TResponse extends LinzEndpoint["responses"]>(endpoint: {
+declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Required<LinzEndpoint>["parameters"]["query"]>, THeader extends NonNullable<Required<LinzEndpoint>["parameters"]["header"]>, TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>, TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>, TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0], TResponse extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>>(endpoint: {
     tags?: Tag[];
     summary?: string;
     description?: string;

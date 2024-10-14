@@ -101,8 +101,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     // collect response objects
     const responseSchemaName = `${upperFirst(operationObject.operationId)}Response`;
     for (const [ , schema ] of Object.entries(operationObject.responses ?? {})) {
-      if (typeof schema === "object" && schema._def.typeName !== z.ZodVoid.name) {
-        schemaComponent[responseSchemaName] = generateSchema(schema) as OpenAPIV3.SchemaObject;
+      if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
+        schemaComponent[responseSchemaName] = generateSchema(schema.body) as OpenAPIV3.SchemaObject;
       }
     }
 
@@ -151,7 +151,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           content:
             typeof v === "boolean" || typeof v === "string"
               ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-              : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?._def.typeName === z.ZodVoid.name)
+              : intoContentTypeRef(JsonBody.mimeType, responseSchemaName, v?.body._def.typeName === z.ZodVoid.name)
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
