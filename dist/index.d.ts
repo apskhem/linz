@@ -111,6 +111,7 @@ declare abstract class SenderBody<B extends z.ZodType = any> {
     private _examples;
     abstract readonly body: B;
     abstract mimeType: string;
+    abstract serialize<T extends z.infer<B>>(data: T): Promise<Buffer>;
     describe(description: SenderBody["_description"]): this;
     get description(): SenderBody["_description"];
     requireHeaders(headers: SenderBody["_headers"]): this;
@@ -122,6 +123,7 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sende
     readonly body: B;
     static readonly mimeType = "application/json";
     constructor(body: B);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
 declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
@@ -129,19 +131,29 @@ declare class FormDataBody<B extends ZodObject<Record<string, ZodParameterTypes 
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "multipart/form-data";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class UrlEncodedBody<B extends ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType = "application/x-www-form-urlencoded";
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
 declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType = "application/octet-stream";
     constructor(body?: B);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    get mimeType(): string;
+}
+declare class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
+    readonly body: B;
+    static readonly mimeType = "text/plain";
+    constructor(body?: B);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
     get mimeType(): string;
 }
 
@@ -173,4 +185,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };
+export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };

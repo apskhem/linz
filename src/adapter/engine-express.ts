@@ -14,7 +14,7 @@ import {
   ValidationError
 } from "../";
 import { expressBodyParser } from "../internal/middlewares";
-import { formatExpressReq, prepareResponse, responseExpressError } from "../internal/utils";
+import { formatExpressReq, responseExpressError } from "../internal/utils";
 
 type OpenAPIDocsOptions = {
   vendor: "scalar";
@@ -103,18 +103,17 @@ export function initExpress(
 
           result.payload.body.pipe(res);
         } else {
-          const preparedResult = prepareResponse(result.payload.body);
-
-          if (preparedResult) {
+          if (typeof result.payload.body === "undefined") {
             res
-              .contentType(preparedResult.contentType)
-              .status(usedStatus)
               .header(result.payload.headers)
-              .send(preparedResult.body);
+              .status(usedStatus)
+              .end();
           } else {
             res
+              .contentType(responseValidator.mimeType)
               .header(result.payload.headers)
-              .end();
+              .status(usedStatus)
+              .send(responseValidator.serialize(result.payload.body));
           }
         }
       } catch (err) {

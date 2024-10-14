@@ -1,3 +1,5 @@
+import { FormDataEncoder } from "form-data-encoder";
+import { FormData, File as FormDataFile } from "formdata-node";
 import { mapValues } from "lodash";
 import type { OpenAPIV3 } from "openapi-types";
 import z, { type ZodObject, type ZodType } from "zod";
@@ -175,6 +177,8 @@ abstract class SenderBody<B extends z.ZodType = any> {
   abstract readonly body: B;
   abstract mimeType: string;
 
+  abstract serialize<T extends z.infer<B>>(data: T): Promise<Buffer>;
+
   describe(description: SenderBody["_description"]): this {
     this._description = description;
     return this;
@@ -212,6 +216,10 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
     super();
   }
 
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+    return Buffer.from(JSON.stringify(data));
+  }
+
   override get mimeType(): string {
     return JsonBody.mimeType;
   }
@@ -230,13 +238,32 @@ export class FormDataBody<
     super();
   }
 
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+    const form = new FormData();
+    
+    for (const [ k, v ] of Object.entries(data)) {
+      if (v instanceof File) {
+        form.set(k, new FormDataFile([ v.slice() ], v.name, { type: v.type }), v.name);
+      } else {
+        form.set(k, String(v));
+      }
+    }
+
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of new FormDataEncoder(form).encode()) {
+      chunks.push(Buffer.from(chunk));
+    }
+
+    return Buffer.concat(chunks);
+  }
+
   override get mimeType(): string {
     return FormDataBody.mimeType;
   }
 }
 
 export class UrlEncodedBody<
-  B extends ZodObject<Record<string, ZodParameterTypes>> = any,
+  B extends ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";
@@ -246,6 +273,12 @@ export class UrlEncodedBody<
     public readonly encoding?: Record<K, Readonly<EncodingItem>>
   ) {
     super();
+  }
+
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+    return Buffer.from(
+      new URLSearchParams(data instanceof URLSearchParams ? data : mapValues(data, (v) => String(v))).toString()
+    );
   }
 
   override get mimeType(): string {
@@ -262,7 +295,29 @@ export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> =
     super();
   }
 
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+    return data;
+  }
+
   override get mimeType(): string {
     return OctetStreamBody.mimeType;
+  }
+}
+
+export class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
+  static readonly mimeType = "text/plain";
+
+  constructor(
+    public readonly body: B = z.string() as B
+  ) {
+    super();
+  }
+
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
+    return Buffer.from(data);
+  }
+
+  override get mimeType(): string {
+    return TextBody.mimeType;
   }
 }

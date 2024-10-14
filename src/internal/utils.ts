@@ -54,48 +54,6 @@ export function responseExpressError(res: Response, statusCode: number, message:
     .send({ statusCode, message });
 }
 
-type PreparedResponse = {
-  contentType: string;
-  body: string | Buffer;
-};
-
-export function prepareResponse<T>(body: T): PreparedResponse | null {
-  if (typeof body === "undefined") {
-    return null;
-  }
-  if (typeof body === "string" || typeof body === "number" || typeof body === "boolean") {
-    return {
-      contentType: "text/plain",
-      body: String(body)
-    };
-  }
-  if (Array.isArray(body) || typeof body === "object" || body === null) {
-    return {
-      contentType: "application/json",
-      body: JSON.stringify(body)
-    };
-  }
-  if (Buffer.isBuffer(body)) {
-    return {
-      contentType: "application/octet-stream",
-      body
-    };
-  }
-  if (body instanceof URLSearchParams) {
-    return {
-      contentType: "application/x-www-form-urlencoded",
-      body: Array.from(body)
-        .map((item) => item.map(encodeURIComponent).join("="))
-        .join("&")
-    };
-  }
-
-  return {
-    contentType: "text/plain",
-    body: String(body)
-  };
-}
-
 export function convertPathParams(path: string): { path: string, params: string[] } {
   const paramRegex = /:([^/]+)/g;
 
