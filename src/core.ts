@@ -224,8 +224,12 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
   }
 }
 
+type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
+
 export class FormDataBody<
-  B extends z.ZodObject<Record<string, ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>>> = any,
+  B extends z.ZodObject<
+    Record<string, z.ZodArray<FormDataValidator> | z.ZodTuple<[FormDataValidator, ...FormDataValidator[]]>>
+  > = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "multipart/form-data";
@@ -238,7 +242,9 @@ export class FormDataBody<
   }
 
   override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return encode(mapValues(data, (v) => [ v instanceof File ? v : String(v) ]));
+    return encode(
+      mapValues(data, (vx) => vx.map((vy) => vy instanceof File ? vy : String(vy)))
+    );
   }
 
   override get mimeType(): string {
@@ -247,7 +253,10 @@ export class FormDataBody<
 }
 
 export class UrlEncodedBody<
-  B extends z.ZodObject<Record<string, ZodParameterTypes>> | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
+  B extends z.ZodObject<
+    Record<string, z.ZodTuple<[ZodParameterTypes, ...ZodParameterTypes[]]> | ZodParameterTypes>
+  >
+    | z.ZodType<URLSearchParams, z.ZodTypeDef, URLSearchParams> = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
   static readonly mimeType = "application/x-www-form-urlencoded";

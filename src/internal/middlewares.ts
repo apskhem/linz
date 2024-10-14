@@ -53,61 +53,16 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         (mergedItems[part.name] ??= []).push(data);
       }
 
-      // validate
-      const err = [];
-      for (const [ key, values = [] ] of Object.entries(mergedItems)) {
-        if (values.length > 1) {
-          err.push({
-            field: key,
-            message: "Duplicated key"
-          });
-        }
-      }
-
-      if (err.length) {
-        return responseExpressError(
-          res,
-          400,
-          JSON.stringify({
-            in: "body",
-            result: err.map(({ field, message }) => ({
-              path: [ field ],
-              message
-            }))
-          })
-        );
-      }
-
-      req.body = mapValues(mergedItems, (v) => v[0]);
+      req.body = mergedItems;
 
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/x-www-form-urlencoded") {
       const data = Buffer.concat(bufferChunks).toString("utf-8");
       const dataUrl = new URLSearchParams(data);
 
-      const duplicatedKeys: string[] = [];
-      Array.from(dataUrl.keys()).reduce((acc, x) => {
-        if (acc.has(x)) {
-          duplicatedKeys.push(x);
-        }
-        return acc.add(x);
-      }, new Set<string>());
-
-      if (duplicatedKeys.length) {
-        return responseExpressError(
-          res,
-          400,
-          JSON.stringify({
-            in: "body",
-            result: duplicatedKeys.map((fieldName) => ({
-              path: [ fieldName ],
-              message: "Duplicated key"
-            }))
-          })
-        );
-      }
-
-      req.body = Object.fromEntries(dataUrl);
+      req.body = Object.fromEntries(
+        Array.from(dataUrl.keys()).map((k) => [ k, dataUrl.getAll(k) ])
+      );
 
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/octet-stream") {
