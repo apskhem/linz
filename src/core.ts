@@ -228,7 +228,7 @@ type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>
 
 export class FormDataBody<
   B extends z.ZodObject<
-    Record<string, z.ZodArray<FormDataValidator> | z.ZodTuple<[FormDataValidator, ...FormDataValidator[]]>>
+    Record<string, FormDataValidator>
   > = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
@@ -242,9 +242,7 @@ export class FormDataBody<
   }
 
   override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return encode(
-      mapValues(data, (vx) => vx.map((vy) => vy instanceof File ? vy : String(vy)))
-    );
+    return (await this.serializeWithContentType(data))[1];
   }
 
   async serializeWithContentType<T extends z.TypeOf<B>>(data: T): Promise<[string, Buffer]> {
@@ -253,7 +251,7 @@ export class FormDataBody<
     return [
       `${FormDataBody.mimeType}; boundary=${boundary}`,
       await encode(
-        mapValues(data, (vx) => vx.map((vy) => vy instanceof File ? vy : String(vy))),
+        mapValues(data, (vx) => [ vx instanceof File ? vx : String(vx) ]),
         boundary
       )
     ];
@@ -266,7 +264,7 @@ export class FormDataBody<
 
 export class UrlEncodedBody<
   B extends z.ZodObject<
-    Record<string, z.ZodTuple<[ZodParameterTypes, ...ZodParameterTypes[]]> | ZodParameterTypes>
+    Record<string, ZodParameterTypes>
     // FIXME: should also accept `URLSearchParams`?
   > = any,
   K extends keyof z.infer<B> = any
