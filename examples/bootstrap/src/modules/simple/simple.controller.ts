@@ -58,8 +58,8 @@ const endpoints: LinzEndpointGroup = {
   "post:/echo/simple/upload": endpoint({
     requestBody: new FormDataBody(
       z.object({
-        file: z.tuple([ z.instanceof(File) ]),
-        field: z.tuple([ z.string() ])
+        file: z.instanceof(File),
+        field: z.string()
       }),
       {
         file: {
@@ -78,10 +78,10 @@ const endpoints: LinzEndpointGroup = {
     },
     operationId: "echoUploadSimple",
     handler: async ({ body }) => {
-      const file = body.file[0];
+      const file = body.file;
 
       fs.writeFileSync(file.name, new Uint8Array(await file.slice().arrayBuffer()))
-      return { field: body.field[0] };
+      return { field: body.field };
     }
   })
 };
