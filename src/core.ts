@@ -1,7 +1,8 @@
-import { encode, generateBoundary } from "internal/multipart";
 import { mapValues } from "lodash";
 import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
 import z from "zod";
+
+import { encode, generateBoundary } from "./internal/multipart";
 
 type ZodParameterTypes =
   | z.ZodString
