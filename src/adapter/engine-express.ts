@@ -122,7 +122,7 @@ export function initExpress(
               .contentType(responseValidator.mimeType)
               .header(result.payload.headers)
               .status(usedStatus)
-              .send(responseValidator.serialize(result.payload.body));
+              .send(await responseValidator.serialize(result.payload.body));
           }
         }
       } catch (err) {
