@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import { Readable } from "stream";
 
 import cors, { type CorsOptions } from "cors";
@@ -88,9 +89,8 @@ export function initExpress(
           throw new Error("Internal server error");
         }
 
-        let parsedBody = undefined;
         try {
-          parsedBody = responseValidator.body.parse(result.payload.body);
+          responseValidator.body.parse(result.payload.body);
         } catch (err) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"
@@ -100,18 +100,18 @@ export function initExpress(
         }
 
         // response
-        if (parsedBody instanceof Readable) {
+        if (result.payload.body instanceof Readable || result.payload.body instanceof fs.ReadStream) {
           res.header(result.payload.headers);
 
-          parsedBody.pipe(res);
+          result.payload.body.pipe(res);
         } else {
-          if (typeof parsedBody === "undefined") {
+          if (typeof result.payload.body === "undefined") {
             res
               .header(result.payload.headers)
               .status(usedStatus)
               .end();
           } else if (responseValidator instanceof FormDataBody) {
-            const [ mimeType, body ] = await responseValidator.serializeWithContentType(parsedBody);
+            const [ mimeType, body ] = await responseValidator.serializeWithContentType(result.payload.body);
 
             res
               .contentType(mimeType)
