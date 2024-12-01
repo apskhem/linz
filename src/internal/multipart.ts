@@ -73,7 +73,7 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
             const [ header, content = "" ] = h.split(":");
 
             return header?.trim()
-              ? [[ header.trim().toLocaleLowerCase(), content?.trim() ]]
+              ? [[ header.trim().toLowerCase(), content?.trim() ]]
               : [];
           })
         );
@@ -149,7 +149,7 @@ function process(part: Part): Input {
 
     Object.assign(input, {
       ...((k && v) && { [k]: JSON.parse(v) }),
-      type: part.headers["content-type"]?.split(":")[1]?.trim()
+      type: part.headers["content-type"]?.trim()
     });
   }
 

@@ -88,8 +88,9 @@ export function initExpress(
           throw new Error("Internal server error");
         }
 
+        let parsedBody = undefined;
         try {
-          responseValidator.body.parse(result.payload.body);
+          parsedBody = responseValidator.body.parse(result.payload.body);
         } catch (err) {
           console.error(
             "[error]: Invalid output format to the corresponding defined output schema"
@@ -99,18 +100,18 @@ export function initExpress(
         }
 
         // response
-        if (result.payload.body instanceof Readable) {
+        if (parsedBody instanceof Readable) {
           res.header(result.payload.headers);
 
-          result.payload.body.pipe(res);
+          parsedBody.pipe(res);
         } else {
-          if (typeof result.payload.body === "undefined") {
+          if (typeof parsedBody === "undefined") {
             res
               .header(result.payload.headers)
               .status(usedStatus)
               .end();
           } else if (responseValidator instanceof FormDataBody) {
-            const [ mimeType, body ] = await responseValidator.serializeWithContentType(result.payload.body);
+            const [ mimeType, body ] = await responseValidator.serializeWithContentType(parsedBody);
 
             res
               .contentType(mimeType)

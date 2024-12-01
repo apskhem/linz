@@ -208,7 +208,7 @@ abstract class SenderBody<B extends z.ZodType = any> {
 }
 
 export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
-  static readonly mimeType = "application/json";
+  static readonly mimeType: string = "application/json";
 
   constructor(
     public readonly body: B
@@ -233,7 +233,7 @@ export class FormDataBody<
   > = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
-  static readonly mimeType = "multipart/form-data";
+  static readonly mimeType: string = "multipart/form-data";
 
   constructor(
     public readonly body: B,
@@ -270,7 +270,7 @@ export class UrlEncodedBody<
   > = any,
   K extends keyof z.infer<B> = any
 > extends SenderBody<B> {
-  static readonly mimeType = "application/x-www-form-urlencoded";
+  static readonly mimeType: string = "application/x-www-form-urlencoded";
 
   constructor(
     public readonly body: B,
@@ -291,7 +291,7 @@ export class UrlEncodedBody<
 }
 
 export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
-  static readonly mimeType = "application/octet-stream";
+  static readonly mimeType: string = "application/octet-stream";
 
   constructor(
     public readonly body: B = z.instanceof(Buffer) as B
@@ -309,7 +309,7 @@ export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> =
 }
 
 export class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
-  static readonly mimeType = "text/plain";
+  static readonly mimeType: string = "text/plain";
 
   constructor(
     public readonly body: B = z.string() as B
@@ -323,5 +323,13 @@ export class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
 
   override get mimeType(): string {
     return TextBody.mimeType;
+  }
+}
+
+export class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
+  static override readonly mimeType: string = "text/html";
+
+  override get mimeType(): string {
+    return HtmlBody.mimeType;
   }
 }
