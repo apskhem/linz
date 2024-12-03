@@ -12,7 +12,7 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
 
   req.on("end", async () => {
-    if (req.method === "GET") {
+    if (req.method === "GET" || !bufferChunks.length) {
       return next();
     } else if (req.headers[HEADER_CONTENT_TYPE] === "application/json") {
       const rawBody = Buffer.concat(bufferChunks);
