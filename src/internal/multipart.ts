@@ -135,25 +135,46 @@ function process(part: Part): Input {
   // part: 'AAAABBBB' }
   // into this one:
   // { filename: 'A.txt', type: 'text/plain', data: <Buffer 41 41 41 41 42 42 42 42> }
-  const [ , name, filename ] = part.headers["content-disposition"]?.split(";") ?? [];
+  const contentDisposition = parseContentDisposition(part.headers["content-disposition"] ?? "");
 
-  // always process the name field
-  const input = {
+  const result = {
     headers: part.headers,
-    name: name?.split("=")[1]?.replace(/"/g, ""),
-    data: Buffer.from(part.part)
+    name: contentDisposition["name"],
+    data: Buffer.from(part.part),
+    ...(contentDisposition["filename"] && {
+      filename: contentDisposition["filename"],
+      type: part.headers["content-type"]?.trim()
+    })
   };
 
-  if (filename) {
-    const [ k, v ] = filename.split("=").map((x) => x.trim());
+  return result as Input;
+}
 
-    Object.assign(input, {
-      ...((k && v) && { [k]: JSON.parse(v) }),
-      type: part.headers["content-type"]?.trim()
-    });
+function parseContentDisposition(contentDisposition: string): Record<string, string | null> {
+  const result: Record<string, string | null> = {
+    type: null,
+    name: null,
+    filename: null
+  };
+
+  // Split the header into parts
+  const parts = contentDisposition.split(";").map((part) => part.trim());
+
+  // The first part is the type
+  if (parts[0]) {
+    result["type"] = parts[0].toLowerCase();
   }
 
-  return input as Input;
+  // Process remaining parts for key-value pairs
+  for (const part of parts.slice(1)) {
+    const [ key, value ] = part.split("=").map((item) => item.trim());
+    if (key && value) {
+      // Remove quotes around value if present
+      result[key.toLowerCase()] = value.replace(/^"|"$/g, "");
+    }
+  }
+
+  return result;
 }
 
 export function generateBoundary(prefix = "----------------------"): string {
