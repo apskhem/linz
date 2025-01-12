@@ -1,4 +1,4 @@
-import { intersection, mapKeys, mapValues } from "lodash";
+import { mapKeys, mapValues } from "radash";
 
 import { cleanPath } from "./internal/utils";
 
@@ -21,21 +21,21 @@ export function mergeEndpointGroups(
   prefix: string,
   groups: LinzEndpointGroup[]
 ): LinzEndpointGroup {
-  const readKeys: string[] = [];
-  const dupKeys: string[] = [];
+  const readPaths: string[] = [];
+  const dupPaths: string[] = [];
 
   for (const group of groups) {
-    const keys = Object.keys(group).map((key) => cleanPath(`${prefix}${key}`));
+    const paths = Object.keys(group).map((path) => cleanPath(`${prefix}${path}`));
 
-    dupKeys.push(...intersection(readKeys, keys));
-    readKeys.push(...keys);
+    dupPaths.push(...readPaths.filter((k) => paths.includes(k)));
+    readPaths.push(...paths);
   }
 
-  if (dupKeys.length) {
-    throw new Error(`Duplicated keys occured: ${dupKeys.join(", ")}`);
+  if (dupPaths.length) {
+    throw new Error(`Duplicated keys occured: ${dupPaths.join(", ")}`);
   }
 
-  return mapKeys(Object.assign({}, ...groups), (v, k) => cleanPath(k.replace(/:/, `:${prefix}`)));
+  return mapKeys(Object.assign({}, ...groups), (k: string) => cleanPath(k.replace(/:/, `:${prefix}`)));
 }
 
 /**

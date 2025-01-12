@@ -1,7 +1,7 @@
 import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
-import { isEmpty, keyBy, mapValues, omit, pickBy, upperFirst } from "lodash";
 import { OpenAPIV3 } from "openapi-types";
+import { capitalize, isEmpty, mapValues, objectify, omit, shake } from "radash";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
@@ -88,7 +88,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     }
 
     // collect body objects
-    const requestBodySchemaName = `${upperFirst(operationObject.operationId)}RequestBody`;
+    const requestBodySchemaName = `${capitalize(operationObject.operationId)}RequestBody`;
     if (operationObject.requestBody && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name) {
       const schema = generateSchema(operationObject.requestBody.body) as OpenAPIV3.SchemaObject;
 
@@ -99,7 +99,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     }
 
     // collect response objects
-    const responseSchemaName = `${upperFirst(operationObject.operationId)}Response`;
+    const responseSchemaName = `${capitalize(operationObject.operationId)}Response`;
     for (const [ , schema ] of Object.entries(operationObject.responses ?? {})) {
       if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
         schemaComponent[responseSchemaName] = generateSchema(schema.body) as OpenAPIV3.SchemaObject;
@@ -144,7 +144,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         }
       }),
       responses: {
-        ...mapValues(pickBy(operationObject.responses, (v) => typeof v !== "undefined"), (v, k) => ({
+        ...mapValues(shake(operationObject.responses), (v, k) => ({
           description: (typeof v === "string" ? v : null)
             || String(httpStatus[`${k}` as keyof typeof httpStatus])
             || "No description",
@@ -187,8 +187,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       },
       ...(config.security?.length && {
         securitySchemes: mapValues(
-          keyBy(config.security.map((x) => x.inner), "name"),
-          (o) => omit<typeof o, keyof typeof o>(o, [ "handler", "name" ]) as OpenAPIV3.SecuritySchemeObject
+          objectify(config.security.map((x) => x.inner), (o) => o.name),
+          (o) => omit(o, [ "handler", "name" ]) as OpenAPIV3.SecuritySchemeObject
         )
       })
     },
@@ -233,7 +233,7 @@ function intoContentTypeRef(
 function intoFormDataBody(schema: OpenAPIV3.SchemaObject): OpenAPIV3.SchemaObject {
   return {
     type: schema.type,
-    properties: mapValues(schema.properties, (fieldProp) => (
+    properties: mapValues(schema.properties ?? {}, (fieldProp) => (
       "nullable" in fieldProp && fieldProp.nullable && Object.keys(fieldProp).length === 1
         ? { type: "string", format: "binary" }
         : fieldProp

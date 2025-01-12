@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { mapValues } from "lodash";
+import { mapValues } from "radash";
 
 import * as multipart from "./multipart";
 import { responseExpressError } from "./utils";

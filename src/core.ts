@@ -1,4 +1,4 @@
-import { mapValues } from "lodash";
+import { mapValues } from "radash";
 import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
 import z from "zod";
 
@@ -118,9 +118,12 @@ export function endpoint<
     ...(endpoint.requestBody && !(endpoint.requestBody instanceof SenderBody) && {
       requestBody: new JsonBody(endpoint.requestBody)
     }),
-    responses: mapValues(endpoint.responses, (v) => (
-      v instanceof z.ZodType ? new JsonBody(v) : v
-    ))
+    responses: Object.fromEntries(
+      Object.entries(endpoint.responses).map(([k, v]) => [
+        k,
+        v instanceof z.ZodType ? new JsonBody(v) : v
+      ])
+    )
   } as LinzEndpoint;
 }
 
@@ -131,7 +134,7 @@ export class HttpResponse<T> {
       readonly status?: number;
       readonly body?: T | ReadableStream;
     }
-  ) {}
+  ) { }
 }
 
 type SecurityConfig = OpenAPIType.SecuritySchemeObject & {
@@ -252,7 +255,7 @@ export class FormDataBody<
     return [
       `${FormDataBody.mimeType}; boundary=${boundary}`,
       await encode(
-        mapValues(data, (vx) => [ vx instanceof File ? vx : String(vx) ]),
+        mapValues(data, (vx) => [vx instanceof File ? vx : String(vx)]),
         boundary
       )
     ];
@@ -281,7 +284,16 @@ export class UrlEncodedBody<
 
   override async serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<Buffer> {
     return Buffer.from(
-      new URLSearchParams(data instanceof URLSearchParams ? data : mapValues(data, (v) => String(v))).toString()
+      new URLSearchParams(
+        data instanceof URLSearchParams
+          ? data
+          : Object.fromEntries(
+            Object.entries(data).map(([k, v]) => [
+              k,
+              String(v)
+            ])
+          )
+      ).toString()
     );
   }
 
