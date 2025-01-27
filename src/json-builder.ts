@@ -1,7 +1,7 @@
 import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
 import { OpenAPIV3 } from "openapi-types";
-import { pascal, isEmpty, mapValues, objectify, omit, shake } from "radash";
+import { pascal, title, isEmpty, mapValues, objectify, omit, shake } from "radash";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
@@ -88,7 +88,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     }
 
     // collect body objects
-    const requestBodySchemaName = `${pascal(operationObject.operationId)}RequestBody`;
+    const requestBodySchemaName = `${pascal(title(operationObject.operationId))}RequestBody`;
     if (operationObject.requestBody && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name) {
       const schema = generateSchema(operationObject.requestBody.body) as OpenAPIV3.SchemaObject;
 
@@ -99,7 +99,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     }
 
     // collect response objects
-    const responseSchemaName = `${pascal(operationObject.operationId)}Response`;
+    const responseSchemaName = `${pascal(title(operationObject.operationId))}Response`;
     for (const [ , schema ] of Object.entries(operationObject.responses ?? {})) {
       if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
         schemaComponent[responseSchemaName] = generateSchema(schema.body) as OpenAPIV3.SchemaObject;
