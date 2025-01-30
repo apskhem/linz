@@ -135,6 +135,12 @@ export class HttpResponse<T> {
       readonly body?: T | ReadableStream;
     }
   ) { }
+
+  public static withoutBody(status: number, headers?: Record<string, string>) {
+    return headers
+      ? new HttpResponse({ headers, status })
+      : new HttpResponse({ status });
+  }
 }
 
 type SecurityConfig = OpenAPIType.SecuritySchemeObject & {
