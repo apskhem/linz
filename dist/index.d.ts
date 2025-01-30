@@ -86,7 +86,7 @@ declare class HttpResponse<T> {
         readonly status?: number;
         readonly body?: T | ReadableStream;
     });
-    static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<unknown>;
+    static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void>;
 }
 type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
     name: string;

@@ -136,7 +136,7 @@ export class HttpResponse<T> {
     }
   ) { }
 
-  public static withoutBody(status: number, headers?: Record<string, string>) {
+  public static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void> {
     return headers
       ? new HttpResponse({ headers, status })
       : new HttpResponse({ status });
