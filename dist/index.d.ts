@@ -1,5 +1,5 @@
 import { OpenAPIV3 } from 'openapi-types';
-import z from 'zod';
+import z, { z as z$1 } from 'zod';
 import { CorsOptions } from 'cors';
 import { Express } from 'express';
 
@@ -183,6 +183,7 @@ type BuilderConfig = {
     tags?: Record<string, OpenAPIV3.TagObject>;
     paths: LinzEndpointGroup;
     security?: Security<any>[];
+    additionalSchemas?: Record<string, z$1.ZodType>;
 };
 declare function buildJson(config: BuilderConfig): OpenAPIV3.Document;
 

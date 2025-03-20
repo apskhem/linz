@@ -1,5 +1,5 @@
-import { mapValues } from "radash";
 import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
+import { mapValues } from "radash";
 import z from "zod";
 
 import { encode, generateBoundary } from "./internal/multipart";
@@ -119,7 +119,7 @@ export function endpoint<
       requestBody: new JsonBody(endpoint.requestBody)
     }),
     responses: Object.fromEntries(
-      Object.entries(endpoint.responses).map(([k, v]) => [
+      Object.entries(endpoint.responses).map(([ k, v ]) => [
         k,
         v instanceof z.ZodType ? new JsonBody(v) : v
       ])
@@ -261,7 +261,7 @@ export class FormDataBody<
     return [
       `${FormDataBody.mimeType}; boundary=${boundary}`,
       await encode(
-        mapValues(data, (vx) => [vx instanceof File ? vx : String(vx)]),
+        mapValues(data, (vx) => [ vx instanceof File ? vx : String(vx) ]),
         boundary
       )
     ];
@@ -294,7 +294,7 @@ export class UrlEncodedBody<
         data instanceof URLSearchParams
           ? data
           : Object.fromEntries(
-            Object.entries(data).map(([k, v]) => [
+            Object.entries(data).map(([ k, v ]) => [
               k,
               String(v)
             ])

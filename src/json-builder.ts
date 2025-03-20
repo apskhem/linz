@@ -1,7 +1,7 @@
 import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
 import { OpenAPIV3 } from "openapi-types";
-import { pascal, title, isEmpty, mapValues, objectify, omit, shake } from "radash";
+import { pascal, title, isEmpty, mapValues, objectify, omit, shake, mapEntries } from "radash";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
@@ -44,15 +44,48 @@ const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
 })
   .describe("An error related to the validation process with more detailed information");
 
+/**
+ * Configuration object for building an OpenAPI specification.
+ */
 export type BuilderConfig = {
+  /**
+   * The OpenAPI version used in the specification.
+   */
   openapi: "3.0.3";
+  /**
+   * Information about the API, including title, description, and version.
+   */
   info: OpenAPIV3.Document["info"];
+  /**
+   * A list of server definitions describing where the API can be accessed.
+   */
   servers?: OpenAPIV3.Document["servers"];
+  /**
+   * A record of tags for grouping related API endpoints.
+   * The key is the tag name, and the value is the OpenAPI TagObject.
+   */
   tags?: Record<string, OpenAPIV3.TagObject>;
+  /**
+   * The defined API paths and their respective operations.
+   */
   paths: LinzEndpointGroup;
+  /**
+   * Security definitions specifying authentication and authorization mechanisms.
+   */
   security?: Security<any>[];
+  /**
+   * Additional reusable schemas, defined using Zod types,
+   * that are not being auto-listed by `paths`.
+   */
+  additionalSchemas?: Record<string, z.ZodType>;
 };
 
+/**
+ * Builds an OpenAPI JSON document based on the provided configuration.
+ *
+ * @param {BuilderConfig} config - The configuration object for building the OpenAPI specification.
+ * @returns {OpenAPIV3.Document} The generated OpenAPI document.
+ */
 export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
   const transformedPath: OpenAPIV3.Document["paths"] = {};
 
@@ -183,7 +216,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       schemas: {
         ...schemaComponent,
         [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA),
-        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA)
+        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA),
+        ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [ pascal(title(k)), generateSchema(v) ])
       },
       ...(config.security?.length && {
         securitySchemes: mapValues(
@@ -209,7 +243,7 @@ function intoContentTypeRef(
       [contentType]: {}
     };
   }
-  
+
   return {
     [contentType]: {
       schema: {

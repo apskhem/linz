@@ -1,6 +1,6 @@
 {
   "name": "@apskhem/linz",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "A web framework with first-class OpenAPI documentation support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
