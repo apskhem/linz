@@ -17,11 +17,11 @@ import {
   type LinzEndpointGroup,
   METHODS,
   ValidationError
-} from "../";
-import { expressBodyParser, parseCookies } from "../internal/middlewares";
-import { formatExpressReq, responseError } from "../internal/utils";
+} from "./";
+import { expressBodyParser, parseCookies } from "./internal/middlewares";
+import { formatExpressReq, responseError } from "./internal/utils";
 
-const DEFAULT_HEADER: http.OutgoingHttpHeaders = {
+const JSON_HEADER: http.OutgoingHttpHeaders = {
   "content-type": "application/json"
 };
 
@@ -164,14 +164,14 @@ export function createApi(
 function handleError(err: unknown, res: http.ServerResponse) {
   if (err instanceof ApiError) {
     res
-      .writeHead(err.status, DEFAULT_HEADER)
+      .writeHead(err.status, JSON_HEADER)
       .end(JSON.stringify({
         statusCode: err.status,
         message: err.message
       }));
   } else if (err instanceof ValidationError) {
     res
-      .writeHead(400, DEFAULT_HEADER)
+      .writeHead(400, JSON_HEADER)
       .end(JSON.stringify({
         statusCode: 400,
         message: Object.entries(JSON.parse(err.message)).map(([ k, v ]) => ({
@@ -182,7 +182,7 @@ function handleError(err: unknown, res: http.ServerResponse) {
   } else if (err instanceof Error) {
     console.error(String(err));
     res
-      .writeHead(500, DEFAULT_HEADER)
+      .writeHead(500, JSON_HEADER)
       .end(JSON.stringify({
         statusCode: 500,
         message: err.message
@@ -190,7 +190,7 @@ function handleError(err: unknown, res: http.ServerResponse) {
   } else {
     console.error(String(err));
     res
-      .writeHead(500, DEFAULT_HEADER)
+      .writeHead(500, JSON_HEADER)
       .end(JSON.stringify({
         statusCode: 500,
         message: String(err)
