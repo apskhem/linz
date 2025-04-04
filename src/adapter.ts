@@ -6,7 +6,6 @@ import * as url from "url";
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
 import type { OpenAPIV3 } from "openapi-types";
-import { match } from "path-to-regexp";
 import { SCALAR_TEMPLATE } from "templates";
 
 import { bodyParserMiddleware, parseCookies } from "./internal/middlewares";
@@ -73,7 +72,6 @@ export function createApi(
 
       Object.assign(req, {
         query: parsedUrl.query,
-        params: match(path)(parsedUrl.pathname || ""),
         cookies: parseCookies(req.headers.cookie)
       });
 

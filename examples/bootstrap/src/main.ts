@@ -1,7 +1,6 @@
 import * as http from "http";
 
-import { buildJson, createApi } from "@apskhem/linz";
-import { Router } from "@routejs/router";
+import { buildJson, createApi, Router } from "@apskhem/linz";
 import router from "router";
 import { install } from "source-map-support";
 

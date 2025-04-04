@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@apskhem/linz": "file:../..",
-    "@routejs/router": "^3.0.3",
     "radash": "^12.1.0",
     "source-map-support": "^0.5.21"
   },
