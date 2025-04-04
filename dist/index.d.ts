@@ -170,6 +170,7 @@ type OpenAPIDocsOptions = {
     spec: OpenAPIV3.Document;
     docsPath: string;
     specPath: string;
+    theme?: "alternate" | "default" | "moon" | "purple" | "solarized" | "bluePlanet" | "saturn" | "kepler" | "mars" | "deepSpace" | "none";
 };
 type CreateApiConfig = {
     cors: boolean | CorsOptions;

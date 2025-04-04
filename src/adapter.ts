@@ -1,12 +1,12 @@
 import * as fs from "fs";
 import * as http from "http";
+import * as path from "path";
 import { Readable } from "stream";
 import * as url from "url";
 
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
 import type { OpenAPIV3 } from "openapi-types";
-import { SCALAR_TEMPLATE } from "templates";
 
 import { bodyParserMiddleware, parseCookies } from "./internal/middlewares";
 import { formatIncomingRequest, responseError } from "./internal/utils";
@@ -30,6 +30,18 @@ type OpenAPIDocsOptions = {
   spec: OpenAPIV3.Document;
   docsPath: string;
   specPath: string;
+  theme?:
+  | "alternate"
+  | "default"
+  | "moon"
+  | "purple"
+  | "solarized"
+  | "bluePlanet"
+  | "saturn"
+  | "kepler"
+  | "mars"
+  | "deepSpace"
+  | "none";
 }
 
 type CreateApiConfig = {
@@ -149,7 +161,7 @@ export function createApi(
 
   // docs config
   if (config?.docs) {
-    registerDocsEndpoints(app, config.docs);
+    registerDocumentEndpoints(app, config.docs);
   }
 
   // fallback
@@ -197,19 +209,21 @@ function handleError(err: unknown, res: http.ServerResponse) {
   }
 }
 
-function registerDocsEndpoints(app: Router, options: OpenAPIDocsOptions) {
-  app.get(options.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
-    res
-      .writeHead(200, { "content-type": "text/html" })
-      .end(
-        SCALAR_TEMPLATE
-          .replace("{{title}}", options.spec.info.title)
-          .replace("{{specUrl}}", options.specPath)
-      );
-  });
+function registerDocumentEndpoints(app: Router, options: OpenAPIDocsOptions) {
+  const specJson = JSON.stringify(options.spec);
+  const docTemplate = fs.readFileSync(path.join(__dirname, "./doc-template.hbs"), "utf-8")
+    .replace("{{title}}", options.spec.info.title)
+    .replace("{{specUrl}}", options.specPath)
+    .replace("{{theme}}", options.theme ?? "");
+
   app.get(options.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
     res
       .writeHead(200, { "content-type": "application/json" })
-      .end(JSON.stringify(options.spec));
+      .end(specJson);
+  });
+  app.get(options.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
+    res
+      .writeHead(200, { "content-type": "text/html" })
+      .end(docTemplate);
   });
 }
