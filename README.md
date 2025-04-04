@@ -23,9 +23,6 @@ You can view example usage from `examples`.
 Validator Supports
   - Zod
 
-Framework Supports
-  - Express.js
-
 Content Type Supports
   - `application/json`
   - `application/octet-stream`
