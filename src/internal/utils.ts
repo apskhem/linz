@@ -9,7 +9,7 @@ type AdditionalRequestObjects = {
   cookies: any;
 };
 
-export function formatExpressReq(req: http.IncomingMessage & AdditionalRequestObjects, validator: LinzEndpoint): Readonly<HTTPRequest> {
+export function formatIncomingRequest(req: http.IncomingMessage & AdditionalRequestObjects, validator: LinzEndpoint): Readonly<HTTPRequest> {
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
 
   const body = tryCatch(

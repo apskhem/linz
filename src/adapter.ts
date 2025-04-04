@@ -9,6 +9,9 @@ import type { OpenAPIV3 } from "openapi-types";
 import { match } from "path-to-regexp";
 import { SCALAR_TEMPLATE } from "templates";
 
+import { bodyParserMiddleware, parseCookies } from "./internal/middlewares";
+import { formatIncomingRequest, responseError } from "./internal/utils";
+
 import {
   ApiError,
   FormDataBody,
@@ -18,8 +21,6 @@ import {
   METHODS,
   ValidationError
 } from "./";
-import { expressBodyParser, parseCookies } from "./internal/middlewares";
-import { formatExpressReq, responseError } from "./internal/utils";
 
 const JSON_HEADER: http.OutgoingHttpHeaders = {
   "content-type": "application/json"
@@ -32,7 +33,7 @@ type OpenAPIDocsOptions = {
   specPath: string;
 }
 
-type InitExpressConfig = {
+type CreateApiConfig = {
   cors: boolean | CorsOptions;
   docs: OpenAPIDocsOptions
 };
@@ -40,13 +41,13 @@ type InitExpressConfig = {
 export function createApi(
   app: Router,
   endpoints: LinzEndpointGroup,
-  config?: Partial<InitExpressConfig>
+  config?: Partial<CreateApiConfig>
 ) {
   if (config?.cors) {
     app.use(cors(typeof config.cors === "boolean" ? {} : config.cors));
   }
 
-  app.use(expressBodyParser);
+  app.use(bodyParserMiddleware);
 
   console.log(`[server]: Registering ${Object.keys(endpoints).length} endpoints...`);
 
@@ -80,7 +81,7 @@ export function createApi(
 
       try {
         // validate
-        const validatedReq = formatExpressReq(req as any, operatorObject);
+        const validatedReq = formatIncomingRequest(req as any, operatorObject);
 
         // process auth (if has) sequentially
         if (operatorObject.security?.length) {

@@ -5,7 +5,7 @@ import { mapValues } from "radash";
 import * as multipart from "./multipart";
 import { responseError } from "./utils";
 
-export function expressBodyParser(req: http.IncomingMessage, res: http.ServerResponse, next: () => any): void {
+export function bodyParserMiddleware(req: http.IncomingMessage, res: http.ServerResponse, next: () => any): void {
   const bufferChunks: Buffer[] = [];
 
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));

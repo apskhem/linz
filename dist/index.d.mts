@@ -170,11 +170,11 @@ type OpenAPIDocsOptions = {
     docsPath: string;
     specPath: string;
 };
-type InitExpressConfig = {
+type CreateApiConfig = {
     cors: boolean | CorsOptions;
     docs: OpenAPIDocsOptions;
 };
-declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
+declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
 type BuilderConfig = {
     openapi: "3.0.3";
