@@ -1,12 +1,11 @@
-import { NextFunction, Request, Response } from "express";
+import * as http from "http";
+
 import { mapValues } from "radash";
 
 import * as multipart from "./multipart";
-import { responseExpressError } from "./utils";
+import { responseError } from "./utils";
 
-const HEADER_CONTENT_TYPE = "content-type";
-
-export function expressBodyParser(req: Request, res: Response, next: NextFunction): void {
+export function expressBodyParser(req: http.IncomingMessage, res: http.ServerResponse, next: () => any): void {
   const bufferChunks: Buffer[] = [];
 
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
@@ -14,25 +13,27 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
   req.on("end", async () => {
     if (req.method === "GET" || !bufferChunks.length) {
       return next();
-    } else if (req.headers[HEADER_CONTENT_TYPE] === "application/json") {
+    } else if (req.headers["content-type"] === "application/json") {
       const rawBody = Buffer.concat(bufferChunks);
 
       try {
         if (rawBody.length) {
-          req.body = JSON.parse(rawBody.toString("utf-8"));
+          Object.assign(req, {
+            body: JSON.parse(rawBody.toString("utf-8"))
+          });
         }
       } catch (err) {
-        return responseExpressError(res, 400, "Invalid JSON");
+        return responseError(res, 400, "Invalid JSON");
       }
 
       return next();
-    } else if (req.headers[HEADER_CONTENT_TYPE]?.startsWith("multipart/form-data")) {
+    } else if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
       const rawBody = Buffer.concat(bufferChunks);
 
       const boundary = multipart.getBoundary(req.headers["content-type"]);
 
       if (!boundary) {
-        return responseExpressError(res, 400, "Cannot find multipart boundary");
+        return responseError(res, 400, "Cannot find multipart boundary");
       }
 
       const parts = multipart.parse(rawBody, boundary);
@@ -63,7 +64,7 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         }
       }
       if (err.length) {
-        return responseExpressError(
+        return responseError(
           res,
           400,
           JSON.stringify({
@@ -75,11 +76,13 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
           })
         );
       }
-      
-      req.body = mapValues(mergedItems, (v) => v[0]);
+
+      Object.assign(req, {
+        body: mapValues(mergedItems, (v) => v[0])
+      });
 
       return next();
-    } else if (req.headers[HEADER_CONTENT_TYPE] === "application/x-www-form-urlencoded") {
+    } else if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
       const data = Buffer.concat(bufferChunks).toString("utf-8");
       const dataUrl = new URLSearchParams(data);
 
@@ -92,7 +95,7 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
       }, new Set<string>());
 
       if (duplicatedKeys.length) {
-        return responseExpressError(
+        return responseError(
           res,
           400,
           JSON.stringify({
@@ -105,19 +108,32 @@ export function expressBodyParser(req: Request, res: Response, next: NextFunctio
         );
       }
 
-      req.body = Object.fromEntries(dataUrl);
+      Object.assign(req, {
+        body: Object.fromEntries(dataUrl)
+      });
 
       return next();
-    } else if (req.headers[HEADER_CONTENT_TYPE] === "application/octet-stream") {
-      req.body = Buffer.concat(bufferChunks);
+    } else if (req.headers["content-type"] === "application/octet-stream") {
+      Object.assign(req, {
+        body: Buffer.concat(bufferChunks)
+      });
 
       return next();
     } else {
-      return responseExpressError(res, 415, `'${req.headers[HEADER_CONTENT_TYPE]}' content type is not supported`);
+      return responseError(res, 415, `'${req.headers["content-type"]}' content type is not supported`);
     }
   });
 
   req.on("error", (err) => {
-    responseExpressError(res, 500, String(err));
+    responseError(res, 500, String(err));
   });
+}
+
+export function parseCookies(cookieHeader = "") {
+  return cookieHeader.split(";").reduce((cookies, cookie) => {
+    const [ name, ...rest ] = cookie.trim().split("=");
+    if (!name) {return cookies;}
+    cookies[name] = decodeURIComponent(rest.join("="));
+    return cookies;
+  }, {} as Record<string, string>);
 }

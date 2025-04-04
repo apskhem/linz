@@ -1,8 +1,15 @@
-import type { Request, Response } from "express";
+import * as http from "http";
 
 import { type HTTPRequest, type LinzEndpoint, ValidationError } from "../core";
 
-export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonly<HTTPRequest> {
+type AdditionalRequestObjects = {
+  body: any,
+  query: any;
+  params: any;
+  cookies: any;
+};
+
+export function formatExpressReq(req: http.IncomingMessage & AdditionalRequestObjects, validator: LinzEndpoint): Readonly<HTTPRequest> {
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
 
   const body = tryCatch(
@@ -39,7 +46,7 @@ export function formatExpressReq(req: Request, validator: LinzEndpoint): Readonl
   };
 }
 
-export function responseExpressError(res: Response, statusCode: number, message: string, loggerScope?: string): void {
+export function responseError(res: http.ServerResponse, statusCode: number, message: string, loggerScope?: string): void {
   if (typeof loggerScope === "string") {
     if (loggerScope) {
       console.error(`[error:${loggerScope}]: ${message}`);
@@ -49,9 +56,8 @@ export function responseExpressError(res: Response, statusCode: number, message:
   }
 
   res
-    .status(statusCode)
-    .contentType("application/json")
-    .send({ statusCode, message });
+    .writeHead(statusCode, { "content-type": "application/json" })
+    .end(JSON.stringify({ statusCode, message }));
 }
 
 export function convertPathParams(path: string): { path: string, params: string[] } {

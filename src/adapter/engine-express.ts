@@ -1,9 +1,12 @@
 import * as fs from "fs";
+import * as http from "http";
 import { Readable } from "stream";
+import * as url from "url";
 
+import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
-import type { Express, Response } from "express";
 import type { OpenAPIV3 } from "openapi-types";
+import { match } from "path-to-regexp";
 import { SCALAR_TEMPLATE } from "templates";
 
 import {
@@ -15,8 +18,12 @@ import {
   METHODS,
   ValidationError
 } from "../";
-import { expressBodyParser } from "../internal/middlewares";
-import { formatExpressReq, responseExpressError } from "../internal/utils";
+import { expressBodyParser, parseCookies } from "../internal/middlewares";
+import { formatExpressReq, responseError } from "../internal/utils";
+
+const DEFAULT_HEADER: http.OutgoingHttpHeaders = {
+  "content-type": "application/json"
+};
 
 type OpenAPIDocsOptions = {
   vendor: "scalar";
@@ -30,8 +37,8 @@ type InitExpressConfig = {
   docs: OpenAPIDocsOptions
 };
 
-export function initExpress(
-  app: Express,
+export function createApi(
+  app: Router,
   endpoints: LinzEndpointGroup,
   config?: Partial<InitExpressConfig>
 ) {
@@ -60,12 +67,20 @@ export function initExpress(
 
     console.log(`[register]: ${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
-    app[method as HttpMethod](path, async (req, res) => {
+    app[method as HttpMethod](path, async (req: http.IncomingMessage, res: http.ServerResponse) => {
+      const parsedUrl = url.parse(req.url || "", true);
+
+      Object.assign(req, {
+        query: parsedUrl.query,
+        params: match(path)(parsedUrl.pathname || ""),
+        cookies: parseCookies(req.headers.cookie)
+      });
+
       const extensions = {};
 
       try {
         // validate
-        const validatedReq = formatExpressReq(req, operatorObject);
+        const validatedReq = formatExpressReq(req as any, operatorObject);
 
         // process auth (if has) sequentially
         if (operatorObject.security?.length) {
@@ -101,29 +116,30 @@ export function initExpress(
 
         // response
         if (result.payload.body instanceof Readable || result.payload.body instanceof fs.ReadStream) {
-          res.header(result.payload.headers);
+          res.writeHead(usedStatus, result.payload.headers);
 
           result.payload.body.pipe(res);
         } else {
           if (typeof result.payload.body === "undefined") {
             res
-              .header(result.payload.headers)
-              .status(usedStatus)
+              .writeHead(usedStatus, result.payload.headers)
               .end();
           } else if (responseValidator instanceof FormDataBody) {
             const [ mimeType, body ] = await responseValidator.serializeWithContentType(result.payload.body);
 
             res
-              .contentType(mimeType)
-              .header(result.payload.headers)
-              .status(usedStatus)
-              .send(body);
+              .writeHead(usedStatus, {
+                "content-type": mimeType,
+                ...result.payload.headers
+              })
+              .end(body);
           } else {
             res
-              .contentType(responseValidator.mimeType)
-              .header(result.payload.headers)
-              .status(usedStatus)
-              .send(await responseValidator.serialize(result.payload.body));
+              .writeHead(usedStatus, {
+                "content-type": responseValidator.mimeType,
+                ...result.payload.headers
+              })
+              .end(await responseValidator.serialize(result.payload.body));
           }
         }
       } catch (err) {
@@ -138,57 +154,63 @@ export function initExpress(
   }
 
   // fallback
-  registerNotFoundHandler(app);
+  app.use((req: http.IncomingMessage, res: http.ServerResponse) => {
+    const { pathname } = url.parse(req.url || "", true);
+
+    responseError(res, 404, `Cannot find ${req.method} ${pathname}`);
+  });
 }
 
-function handleError(err: unknown, res: Response) {
+function handleError(err: unknown, res: http.ServerResponse) {
   if (err instanceof ApiError) {
-    res.status(err.status).send({
-      statusCode: err.status,
-      message: err.message
-    });
+    res
+      .writeHead(err.status, DEFAULT_HEADER)
+      .end(JSON.stringify({
+        statusCode: err.status,
+        message: err.message
+      }));
   } else if (err instanceof ValidationError) {
-    res.status(400).send({
-      statusCode: 400,
-      message: Object.entries(JSON.parse(err.message)).map(([ k, v ]) => ({
-        in: k,
-        result: v
-      }))
-    });
+    res
+      .writeHead(400, DEFAULT_HEADER)
+      .end(JSON.stringify({
+        statusCode: 400,
+        message: Object.entries(JSON.parse(err.message)).map(([ k, v ]) => ({
+          in: k,
+          result: v
+        }))
+      }));
   } else if (err instanceof Error) {
     console.error(String(err));
-    res.status(500).send({
-      statusCode: 500,
-      message: err.message
-    });
+    res
+      .writeHead(500, DEFAULT_HEADER)
+      .end(JSON.stringify({
+        statusCode: 500,
+        message: err.message
+      }));
   } else {
     console.error(String(err));
-    res.status(500).send({
-      statusCode: 500,
-      message: String(err)
-    });
+    res
+      .writeHead(500, DEFAULT_HEADER)
+      .end(JSON.stringify({
+        statusCode: 500,
+        message: String(err)
+      }));
   }
 }
 
-function registerDocsEndpoints(app: Express, options: OpenAPIDocsOptions) {
-  app.get(options.docsPath, (req, res) => {
+function registerDocsEndpoints(app: Router, options: OpenAPIDocsOptions) {
+  app.get(options.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
     res
-      .contentType("html")
-      .send(
+      .writeHead(200, { "content-type": "text/html" })
+      .end(
         SCALAR_TEMPLATE
           .replace("{{title}}", options.spec.info.title)
           .replace("{{specUrl}}", options.specPath)
       );
   });
-  app.get(options.specPath, (req, res) => {
+  app.get(options.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
     res
-      .contentType("json")
-      .send(JSON.stringify(options.spec, null, 2));
-  });
-}
-
-function registerNotFoundHandler(app: Express) {
-  app.all("*", (req, res) => {
-    responseExpressError(res, 404, `Cannot find ${req.method.toUpperCase()} ${req.path}`);
+      .writeHead(200, { "content-type": "application/json" })
+      .end(JSON.stringify(options.spec));
   });
 }

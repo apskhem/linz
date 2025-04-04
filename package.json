@@ -23,8 +23,10 @@
   },
   "dependencies": {
     "@anatine/zod-openapi": "~1.14.2",
+    "@routejs/router": "^3.0.3",
     "cors": "^2.8.5",
     "http-status": "~1.7.4",
+    "path-to-regexp": "^8.2.0",
     "radash": "^12.1.0",
     "zod": "^3.24.1"
   },
@@ -33,7 +35,6 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
     "openapi-types": "^12.1.3",

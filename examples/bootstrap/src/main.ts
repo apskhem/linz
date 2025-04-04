@@ -1,5 +1,7 @@
-import { buildJson, initExpress } from "@apskhem/linz";
-import express, { Express } from "express";
+import * as http from "http";
+
+import { buildJson, createApi } from "@apskhem/linz";
+import { Router } from "@routejs/router";
 import router from "router";
 import { install } from "source-map-support";
 
@@ -10,8 +12,7 @@ import pk from "../package.json";
 // Enable source map support
 install();
 
-const app: Express = express();
-const port = 3000;
+const app = new Router();
 
 const swaggerJson = buildJson({
   openapi: "3.0.3",
@@ -24,7 +25,7 @@ const swaggerJson = buildJson({
   security: []
 });
 
-initExpress(app, router, {
+createApi(app, router, {
   cors: true,
   docs: {
     vendor: "scalar",
@@ -34,6 +35,4 @@ initExpress(app, router, {
   }
 });
 
-app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+http.createServer(app.handler()).listen(3000);

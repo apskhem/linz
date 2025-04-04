@@ -1,7 +1,7 @@
 import { OpenAPIV3 } from 'openapi-types';
 import z, { z as z$1 } from 'zod';
+import { Router } from '@routejs/router';
 import { CorsOptions } from 'cors';
-import { Express } from 'express';
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
 type Extensions = Record<string, any>;
@@ -174,7 +174,7 @@ type InitExpressConfig = {
     cors: boolean | CorsOptions;
     docs: OpenAPIDocsOptions;
 };
-declare function initExpress(app: Express, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
+declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<InitExpressConfig>): void;
 
 type BuilderConfig = {
     openapi: "3.0.3";
@@ -193,4 +193,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, endpoint, initExpress, mergeEndpointGroups };
+export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
