@@ -6,7 +6,7 @@ import { install } from "source-map-support";
 
 import { TAG } from "common/constants/values";
 
-import pk from "../package.json";
+import pkg from "../package.json";
 
 // Enable source map support
 install();
@@ -17,7 +17,7 @@ const swaggerJson = buildJson({
   openapi: "3.0.3",
   info: {
     title: "Linz Bootstrap API",
-    version: pk.version,
+    version: pkg.version,
   },
   tags: TAG,
   paths: router,
@@ -27,7 +27,7 @@ const swaggerJson = buildJson({
 createApi(app, router, {
   cors: true,
   docs: {
-    vendor: "scalar",
+    viewer: "scalar",
     spec: swaggerJson,
     docsPath: "/",
     specPath: "/openapi.json",

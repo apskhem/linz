@@ -25,28 +25,15 @@ const JSON_HEADER: http.OutgoingHttpHeaders = {
   "content-type": "application/json"
 };
 
-type OpenAPIDocsOptions = {
-  vendor: "scalar";
-  spec: OpenAPIV3.Document;
-  docsPath: string;
-  specPath: string;
-  theme?:
-  | "alternate"
-  | "default"
-  | "moon"
-  | "purple"
-  | "solarized"
-  | "bluePlanet"
-  | "saturn"
-  | "kepler"
-  | "mars"
-  | "deepSpace"
-  | "none";
-}
-
 type CreateApiConfig = {
   cors: boolean | CorsOptions;
-  docs: OpenAPIDocsOptions
+  docs: {
+    viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
+    spec: OpenAPIV3.Document;
+    docsPath: string;
+    specPath: string;
+    theme?: string;
+  }
 };
 
 export function createApi(
@@ -209,9 +196,9 @@ function handleError(err: unknown, res: http.ServerResponse) {
   }
 }
 
-function registerDocumentEndpoints(app: Router, options: OpenAPIDocsOptions) {
+function registerDocumentEndpoints(app: Router, options: CreateApiConfig["docs"]) {
   const specJson = JSON.stringify(options.spec);
-  const docTemplate = fs.readFileSync(path.join(__dirname, "./doc-template.hbs"), "utf-8")
+  const docTemplate = fs.readFileSync(path.join(__dirname, `./templates/${options.viewer}.hbs`), "utf-8")
     .replace("{{title}}", options.spec.info.title)
     .replace("{{specUrl}}", options.specPath)
     .replace("{{theme}}", options.theme ?? "");

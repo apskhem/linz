@@ -17,11 +17,16 @@ export default defineConfig({
       name: "copy-doc-templates",
       setup(build) {
         build.onEnd(async () => {
-          const apiDocTemplate = fs.readFileSync("src/doc-template.hbs", "utf-8");
-          fs.writeFileSync("dist/doc-template.hbs", await minify(apiDocTemplate, {
-            minifyJS: true,
-            collapseWhitespace: true
-          }))
+          fs.mkdirSync("dist/templates", { recursive: true });
+
+          for (const templateName of fs.readdirSync("src/templates")) {
+            const apiDocTemplate = fs.readFileSync(`src/templates/${templateName}`, "utf-8");
+            fs.writeFileSync(`dist/templates/${templateName}`, await minify(apiDocTemplate, {
+              minifyJS: true,
+              minifyCSS: true,
+              collapseWhitespace: true
+            }));
+          }
         });
       }
     }

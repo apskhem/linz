@@ -165,16 +165,15 @@ declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
     get mimeType(): string;
 }
 
-type OpenAPIDocsOptions = {
-    vendor: "scalar";
-    spec: OpenAPIV3.Document;
-    docsPath: string;
-    specPath: string;
-    theme?: "alternate" | "default" | "moon" | "purple" | "solarized" | "bluePlanet" | "saturn" | "kepler" | "mars" | "deepSpace" | "none";
-};
 type CreateApiConfig = {
     cors: boolean | CorsOptions;
-    docs: OpenAPIDocsOptions;
+    docs: {
+        viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
+        spec: OpenAPIV3.Document;
+        docsPath: string;
+        specPath: string;
+        theme?: string;
+    };
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
