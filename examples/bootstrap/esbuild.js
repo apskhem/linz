@@ -1,5 +1,3 @@
-const fs = require("fs");
-
 const esbuild = require("esbuild");
 
 esbuild.buildSync({
