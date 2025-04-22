@@ -33,7 +33,8 @@ type CreateApiConfig = {
     docsPath: string;
     specPath: string;
     theme?: string;
-  }
+  },
+  fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 
 export function createApi(
@@ -152,7 +153,13 @@ export function createApi(
   }
 
   // fallback
-  app.use((req: http.IncomingMessage, res: http.ServerResponse) => {
+  app.use(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    await config?.fallbackHandler?.(req, res) ?? Promise.resolve(null);
+
+    if (res.headersSent) {
+      return;
+    }
+
     const { pathname } = url.parse(req.url || "", true);
 
     responseError(res, 404, `Cannot find ${req.method} ${pathname}`);

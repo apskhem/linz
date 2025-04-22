@@ -2,6 +2,7 @@ import { Router } from '@routejs/router';
 export * from '@routejs/router';
 import { OpenAPIV3 } from 'openapi-types';
 import z, { z as z$1 } from 'zod';
+import * as http from 'http';
 import { CorsOptions } from 'cors';
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
@@ -174,6 +175,7 @@ type CreateApiConfig = {
         specPath: string;
         theme?: string;
     };
+    fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
