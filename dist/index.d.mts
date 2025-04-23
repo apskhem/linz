@@ -51,6 +51,7 @@ type LinzEndpoint = {
         security?: AppliedSecurity[];
         extensions: Extensions;
         req: http.IncomingMessage;
+        res: http.ServerResponse;
     }) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 type MergeRecordType<T, U> = {
@@ -97,6 +98,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
         security?: AppliedSecurity[];
         extensions: TExt;
         req: http.IncomingMessage;
+        res: http.ServerResponse;
     }) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {

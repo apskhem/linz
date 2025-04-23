@@ -54,6 +54,7 @@ export type LinzEndpoint = {
       security?: AppliedSecurity[];
       extensions: Extensions;
       req: http.IncomingMessage;
+      res: http.ServerResponse;
     }
   ) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
@@ -128,6 +129,7 @@ export function endpoint<
       security?: AppliedSecurity[];
       extensions: TExt;
       req: http.IncomingMessage;
+      res: http.ServerResponse;
     }
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {

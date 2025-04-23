@@ -92,6 +92,7 @@ export function createApi(
         const tmpResult = await operatorObject.handler(validatedReq, {
           extensions,
           req,
+          res,
           ...(operatorObject.security && {
             security: operatorObject.security,
           }),
