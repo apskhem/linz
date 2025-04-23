@@ -1,7 +1,7 @@
-import { BuilderConfig } from "@apskhem/linz";
+import { oas } from "@apskhem/linz";
 
 export const TAG = {
   simple: {
     name: "Simple"
   }
-} satisfies BuilderConfig["tags"];
+} satisfies Record<string, oas.OpenAPIV3.TagObject>;

@@ -1,12 +1,27 @@
 import { Router } from '@routejs/router';
 export * from '@routejs/router';
 import { OpenAPIV3 } from 'openapi-types';
-import z, { z as z$1 } from 'zod';
+import * as openapiTypes from 'openapi-types';
+export { openapiTypes as oas };
 import * as http from 'http';
 import { CorsOptions } from 'cors';
+import z, { z as z$1 } from 'zod';
+
+type CreateApiConfig = {
+    cors: boolean | CorsOptions;
+    docs: {
+        viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
+        spec: OpenAPIV3.Document;
+        docsPath: string;
+        specPath: string;
+        theme?: string;
+    };
+    fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
+};
+declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
-type Extensions = Record<string, any>;
+type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3.TagObject;
 type EncodingItem = {
     contentType?: string[];
@@ -32,7 +47,7 @@ type LinzEndpoint = {
         default?: SenderBody;
     };
     deprecated?: boolean;
-    security?: Security<any>[];
+    security?: AppliedSecurity[];
     handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 type MergeRecordType<T, U> = {
@@ -68,7 +83,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
     requestBody?: TBody;
     responses: TResponse;
     deprecated?: boolean;
-    security?: Security<any>[];
+    security?: AppliedSecurity[];
     handler: (req: Readonly<{
         queries: z.infer<TQuery>;
         headers: z.infer<THeader>;
@@ -90,14 +105,23 @@ declare class HttpResponse<T> {
     });
     static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void>;
 }
-type SecurityConfig = OpenAPIV3.SecuritySchemeObject & {
+interface SecurityConfig {
     name: string;
-    handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<void>;
-};
-declare class Security<T> {
-    readonly inner: SecurityConfig;
+    schema: OpenAPIV3.SecuritySchemeObject;
+    handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+}
+declare class Security implements SecurityConfig {
+    readonly name: string;
+    readonly schema: OpenAPIV3.SecuritySchemeObject;
+    readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
     constructor(config: SecurityConfig);
-    use(flow: string, scopes: string[]): this;
+    apply(scopes: string[]): AppliedSecurity;
+}
+declare class AppliedSecurity {
+    readonly scopes: string[];
+    readonly security: Security;
+    constructor(usedSecurity: Security, scopes: string[]);
+    authenticate(req: Readonly<http.IncomingMessage>, extensions: Extensions): Promise<void>;
 }
 declare class ApiError extends Error {
     readonly status: number;
@@ -166,26 +190,11 @@ declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
     get mimeType(): string;
 }
 
-type CreateApiConfig = {
-    cors: boolean | CorsOptions;
-    docs: {
-        viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
-        spec: OpenAPIV3.Document;
-        docsPath: string;
-        specPath: string;
-        theme?: string;
-    };
-    fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
-};
-declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
-
 type BuilderConfig = {
     openapi: "3.0.3";
     info: OpenAPIV3.Document["info"];
     servers?: OpenAPIV3.Document["servers"];
-    tags?: Record<string, OpenAPIV3.TagObject>;
     paths: LinzEndpointGroup;
-    security?: Security<any>[];
     additionalSchemas?: Record<string, z$1.ZodType>;
 };
 declare function buildJson(config: BuilderConfig): OpenAPIV3.Document;
@@ -196,4 +205,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

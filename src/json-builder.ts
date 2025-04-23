@@ -11,18 +11,34 @@ import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, Security, UrlE
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
 
-const ZOD_ERROR_ITEM = z.object({
-  code: z.string(),
-  expected: z.string(),
-  received: z.string(),
-  path: z.string().array(),
+const ZOD_ISSUE_SCHEMA = z.object({
+  code: z.enum([
+    "invalid_type",
+    "invalid_literal",
+    "unrecognized_keys",
+    "invalid_union",
+    "invalid_union_discriminator",
+    "invalid_enum_value",
+    "invalid_arguments",
+    "invalid_return_type",
+    "invalid_date",
+    "invalid_string",
+    "too_small",
+    "too_big",
+    "invalid_intersection_types",
+    "not_multiple_of",
+    "not_finite",
+    "custom"
+  ]),
+  path: z.union([z.string(), z.number().int().min(0)]).array(),
+  fatal: z.boolean().optional(),
   message: z.string()
-});
+}).passthrough();
 
 const ZOD_ERROR_SCHEMA = z.object({
   in: z.enum([ "body", "queries", "params", "headers", "cookies" ])
     .describe("The part of a request where data validation failed"),
-  result: z.array(ZOD_ERROR_ITEM)
+  result: z.array(ZOD_ISSUE_SCHEMA)
     .describe("An array of error items")
 });
 
@@ -188,7 +204,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
-            description: getResponseStatusDesc(operationObject.responses, 400) || "Misformed data in a sending request",
+            description: getResponseStatusDesc(operationObject.responses, 400) || httpStatus[400],
             content: intoContentTypeRef(JsonBody.mimeType, VALIDATION_ERROR_COMPONENT_NAME)
           }
         }),
@@ -199,7 +215,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           }
         }),
         "500": {
-          description: getResponseStatusDesc(operationObject.responses, 500) || "Server unhandled or runtime error that may occur",
+          description: getResponseStatusDesc(operationObject.responses, 500) || httpStatus[500],
           content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
         }
       }
@@ -230,6 +246,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
     })
   };
 }
+
+// -- helpers
 
 function intoContentTypeRef(
   contentType: string,
