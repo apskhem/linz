@@ -11,7 +11,7 @@ install();
 
 const app = new Router();
 
-const swaggerJson = buildJson({
+const openApiSpec = buildJson({
   openapi: "3.1.0",
   info: {
     title: "Linz Bootstrap API",
@@ -24,7 +24,7 @@ createApi(app, router, {
   cors: true,
   docs: {
     viewer: "scalar",
-    spec: swaggerJson,
+    spec: openApiSpec,
     docsPath: "/",
     specPath: "/openapi.json",
   }

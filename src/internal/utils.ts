@@ -1,6 +1,6 @@
 import * as http from "http";
 
-import { type HTTPRequest, type LinzEndpoint, ValidationError } from "../core";
+import { type HTTPRequest, type LinzEndpoint } from "../core";
 
 type AdditionalRequestObjects = {
   body: any;
@@ -11,41 +11,59 @@ type AdditionalRequestObjects = {
 
 export function formatIncomingRequest(
   req: http.IncomingMessage & AdditionalRequestObjects,
+  res: http.ServerResponse,
   validator: LinzEndpoint
-): Readonly<HTTPRequest> {
-  const errors = {} as ConstructorParameters<typeof ValidationError>[0];
+): Readonly<HTTPRequest> | null {
+  const errors = [] as any[];
 
-  const body = tryCatch(
-    () => validator.requestBody?.body.parse(req.body) || req.body,
-    (err: any) => (errors["body"] = JSON.parse(err.message))
-  );
-  const queries = tryCatch(
-    () => validator.parameters?.query?.parse(req.query) || req.query,
-    (err: any) => (errors["queries"] = JSON.parse(err.message))
-  );
-  const params = tryCatch(
-    () => validator.parameters?.path?.parse(req.params) || req.params,
-    (err: any) => (errors["params"] = JSON.parse(err.message))
-  );
-  const headers = tryCatch(
-    () => validator.parameters?.header?.parse(req.headers) || req.headers,
-    (err: any) => (errors["headers"] = JSON.parse(err.message))
-  );
-  const cookies = tryCatch(
-    () => validator.parameters?.cookie?.parse(req.cookies) || req.cookies,
-    (err: any) => (errors["cookies"] = JSON.parse(err.message))
-  );
+  const resultBody = validator.requestBody?.body.safeParse(req.body);
+  if (resultBody.error) {
+    errors.push({
+      in: "body",
+      result: resultBody.error.errors,
+    });
+  }
+  const resultQuery = validator.parameters?.query?.safeParse(req.query);
+  if (resultQuery?.error) {
+    errors.push({
+      in: "queries",
+      result: resultQuery.error.errors,
+    });
+  }
+  const resultPath = validator.parameters?.path?.safeParse(req.params);
+  if (resultPath?.error) {
+    errors.push({
+      in: "params",
+      result: resultPath.error.errors,
+    });
+  }
+  const resultHeader = validator.parameters?.header?.safeParse(req.headers);
+  if (resultHeader?.error) {
+    errors.push({
+      in: "headers",
+      result: resultHeader.error.errors,
+    });
+  }
+  const resultCookie = validator.parameters?.cookie?.safeParse(req.cookies);
+  if (resultCookie?.error) {
+    errors.push({
+      in: "cookies",
+      result: resultCookie.error.errors,
+    });
+  }
 
-  if (Object.keys(errors).length) {
-    throw new ValidationError(errors);
+  if (errors.length) {
+    res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify(errors));
+
+    return null;
   }
 
   return {
-    body: body ?? null,
-    queries: (queries as Record<string, string>) ?? {},
-    params: (params as Record<string, string>) ?? {},
-    headers: (headers as Record<string, string>) ?? {},
-    cookies: (cookies as Record<string, string>) ?? {},
+    body: resultBody?.data ?? null,
+    queries: (resultQuery?.data as Record<string, string>) ?? {},
+    params: (resultPath?.data as Record<string, string>) ?? {},
+    headers: (resultHeader?.data as Record<string, string>) ?? {},
+    cookies: (resultCookie?.data as Record<string, string>) ?? {},
   };
 }
 
@@ -87,13 +105,4 @@ export function convertPathParams(path: string): { path: string; params: string[
 
 export function cleanPath(path: string): string {
   return path.replace(/\/+/gi, "/");
-}
-
-function tryCatch<T>(fn: () => T, handler: (err: unknown) => void): T | null {
-  try {
-    return fn();
-  } catch (err) {
-    handler(err);
-    return null;
-  }
 }

@@ -215,12 +215,6 @@ export class ApiError extends Error {
   }
 }
 
-export class ValidationError extends Error {
-  constructor(public readonly msg: Record<string, any>) {
-    super(JSON.stringify(msg));
-  }
-}
-
 abstract class SenderBody<B extends z.ZodType = any> {
   /** for both `RequestBodyObject` and `ResponseObject` */
   private _description: string | null = null;

@@ -18,12 +18,7 @@ import {
   HttpResponse,
   type LinzEndpointGroup,
   METHODS,
-  ValidationError,
 } from "./";
-
-const JSON_HEADER: http.OutgoingHttpHeaders = {
-  "content-type": "application/json",
-};
 
 type CreateApiConfig = {
   cors: boolean | CorsOptions;
@@ -86,7 +81,7 @@ export function createApi(
         }
 
         // validate
-        const validatedReq = formatIncomingRequest(req as any, operatorObject);
+        const validatedReq = formatIncomingRequest(req as any, res, operatorObject)!;
 
         // process main handler
         const tmpResult = await operatorObject.handler(validatedReq, {
@@ -158,14 +153,47 @@ export function createApi(
           }
         }
       } catch (err) {
-        handleError(err, res);
+        let statusCode: number;
+        let message: string;
+
+        if (err instanceof ApiError) {
+          statusCode = err.status;
+          message = err.message;
+        } else if (err instanceof Error) {
+          statusCode = 500;
+          message = err.message;
+          console.error(String(err));
+        } else {
+          statusCode = 500;
+          message = String(err);
+          console.error(String(err));
+        }
+
+        res.writeHead(statusCode, { "content-type": "application/json" }).end(
+          JSON.stringify({
+            statusCode,
+            message,
+          })
+        );
       }
     });
   }
 
   // docs config
   if (config?.docs) {
-    registerDocumentEndpoints(app, config.docs);
+    const specJson = JSON.stringify(config.docs.spec);
+    const docTemplate = fs
+      .readFileSync(path.join(__dirname, `./templates/${config.docs.viewer}.hbs`), "utf-8")
+      .replace("{{title}}", config.docs.spec.info.title)
+      .replace("{{specUrl}}", config.docs.specPath)
+      .replace("{{theme}}", config.docs.theme ?? "");
+
+    app.get(config.docs.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
+      res.writeHead(200, { "content-type": "application/json" }).end(specJson);
+    });
+    app.get(config.docs.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
+      res.writeHead(200, { "content-type": "text/html" }).end(docTemplate);
+    });
   }
 
   // fallback
@@ -179,58 +207,5 @@ export function createApi(
     const { pathname } = url.parse(req.url || "", true);
 
     responseError(res, 404, `Cannot find ${req.method} ${pathname}`);
-  });
-}
-
-function handleError(err: unknown, res: http.ServerResponse) {
-  if (err instanceof ApiError) {
-    res.writeHead(err.status, JSON_HEADER).end(
-      JSON.stringify({
-        statusCode: err.status,
-        message: err.message,
-      })
-    );
-  } else if (err instanceof ValidationError) {
-    res.writeHead(400, JSON_HEADER).end(
-      JSON.stringify({
-        statusCode: 400,
-        message: Object.entries(JSON.parse(err.message)).map(([k, v]) => ({
-          in: k,
-          result: v,
-        })),
-      })
-    );
-  } else if (err instanceof Error) {
-    console.error(String(err));
-    res.writeHead(500, JSON_HEADER).end(
-      JSON.stringify({
-        statusCode: 500,
-        message: err.message,
-      })
-    );
-  } else {
-    console.error(String(err));
-    res.writeHead(500, JSON_HEADER).end(
-      JSON.stringify({
-        statusCode: 500,
-        message: String(err),
-      })
-    );
-  }
-}
-
-function registerDocumentEndpoints(app: Router, options: CreateApiConfig["docs"]) {
-  const specJson = JSON.stringify(options.spec);
-  const docTemplate = fs
-    .readFileSync(path.join(__dirname, `./templates/${options.viewer}.hbs`), "utf-8")
-    .replace("{{title}}", options.spec.info.title)
-    .replace("{{specUrl}}", options.specPath)
-    .replace("{{theme}}", options.theme ?? "");
-
-  app.get(options.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
-    res.writeHead(200, { "content-type": "application/json" }).end(specJson);
-  });
-  app.get(options.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
-    res.writeHead(200, { "content-type": "text/html" }).end(docTemplate);
   });
 }
