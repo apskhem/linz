@@ -87,7 +87,7 @@ export type BuilderConfig = {
    */
   info: OpenAPIV3_1.Document["info"];
   /**
-   * The default value for the $schema keyword within Schema Objects contained within this OAS document.
+   * The default value for the `$schema` keyword within `SchemaObject` contained within this OAS document.
    */
   jsonSchemaDialect?: (typeof JSON_SCHEMA_DIALECTS)[number];
   /**
