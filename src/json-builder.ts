@@ -1,12 +1,12 @@
-import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
-import { OpenAPIV3 } from "openapi-types";
+import { OpenAPIV3, OpenAPIV3_1 } from "openapi-types";
 import { isEmpty, mapEntries, mapValues, pascal, shake, title } from "radash";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
 
-import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, Security, UrlEncodedBody } from ".";
+import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, OctetStreamBody, Security, UrlEncodedBody } from ".";
+import zodToJsonSchema from "zod-to-json-schema";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
@@ -60,6 +60,14 @@ const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
 })
   .describe("An error related to the validation process with more detailed information");
 
+const JSON_SCHEMA_DIALECTS = [
+  "https://json-schema.org/draft/2020-12/schema#",
+  "https://json-schema.org/draft/2019-09/schema#",
+  "https://json-schema.org/draft-07/schema#",
+  "https://json-schema.org/draft-06/schema#",
+  "http://json-schema.org/draft-04/schema#"
+] as const;
+
 /**
  * Configuration object for building an OpenAPI specification.
  */
@@ -67,19 +75,31 @@ export type BuilderConfig = {
   /**
    * The OpenAPI version used in the specification.
    */
-  openapi: "3.0.3";
+  openapi: "3.1.0" | "3.1.1";
   /**
    * Information about the API, including title, description, and version.
    */
-  info: OpenAPIV3.Document["info"];
+  info: OpenAPIV3_1.Document["info"];
+  /**
+   * The default value for the $schema keyword within Schema Objects contained within this OAS document.
+   */
+  jsonSchemaDialect?: (typeof JSON_SCHEMA_DIALECTS)[number],
   /**
    * A list of server definitions describing where the API can be accessed.
    */
-  servers?: OpenAPIV3.Document["servers"];
+  servers?: OpenAPIV3_1.Document["servers"];
   /**
    * The defined API paths and their respective operations.
    */
   paths: LinzEndpointGroup;
+  /**
+   * The incoming webhooks that MAY be received as part of this API and that the API consumer MAY choose to implement.
+   */
+  webhooks?: OpenAPIV3_1.Document["webhooks"];
+  /**
+   * Additional external documentation.
+   */
+  externalDocs?: OpenAPIV3_1.Document["externalDocs"];
   /**
    * Additional reusable schemas, defined using Zod types,
    * that are not being auto-listed by `paths`.
@@ -91,20 +111,20 @@ export type BuilderConfig = {
  * Builds an OpenAPI JSON document based on the provided configuration.
  *
  * @param {BuilderConfig} config - The configuration object for building the OpenAPI specification.
- * @returns {OpenAPIV3.Document} The generated OpenAPI document.
+ * @returns {OpenAPIV3_1.Document} The generated OpenAPI document.
  */
-export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
-  const transformedPath: OpenAPIV3.Document["paths"] = {};
+export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
+  const transformedPath: OpenAPIV3_1.Document["paths"] = {};
 
-  const schemaComponent: NonNullable<OpenAPIV3.ComponentsObject["schemas"]> = {};
+  const schemaComponent: NonNullable<OpenAPIV3_1.ComponentsObject["schemas"]> = {};
 
   let collectedApplyingSecuritySet = new Set<Security>();
-  let collectedApplyingTagSet = new Set<OpenAPIV3.TagObject>();
+  let collectedApplyingTagSet = new Set<OpenAPIV3_1.TagObject>();
   for (const [ methodPath, operationObject ] of Object.entries(config.paths)) {
     const [ method, ...pathParts ] = methodPath.split(":");
     const { path } = convertPathParams(pathParts.join(":"));
 
-    const parameterObject: OpenAPIV3.ParameterObject[] = [];
+    const parameterObject: OpenAPIV3_1.ParameterObject[] = [];
     const pathObject = transformedPath[path] ?? {};
 
     for (const sec of operationObject.security ?? []) {
@@ -116,7 +136,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
     // collect parameters
     for (const [ type, schema ] of Object.entries(operationObject.parameters ?? {})) {
-      const { properties = {}, required = [] } = generateSchema(schema) as OpenAPIV3.SchemaObject;
+      const { properties = {}, required = [] } = toJsonSchema(schema);
 
       for (const [ name, itemSchema ] of Object.entries(properties)) {
         if ("$ref" in itemSchema) {
@@ -131,32 +151,40 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           in: type,
           ...(description && { description }),
           ...(isItemRequired && { required: isItemRequired }),
-          schema
+          schema: schema as OpenAPIV3.SchemaObject
         });
       }
     }
 
     // collect body objects
     const requestBodySchemaName = `${pascal(title(operationObject.operationId))}RequestBody`;
-    if (operationObject.requestBody && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name) {
-      const schema = generateSchema(operationObject.requestBody.body) as OpenAPIV3.SchemaObject;
-
-      schemaComponent[requestBodySchemaName]
-        = operationObject.requestBody instanceof FormDataBody
-          ? intoFormDataBody(schema)
-          : schema;
+    if (
+      operationObject.requestBody
+      && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name
+      && !(operationObject.requestBody instanceof OctetStreamBody)
+    ) {
+      schemaComponent[requestBodySchemaName] = toJsonSchema(
+        operationObject.requestBody.body,
+        operationObject.requestBody.mimeType
+      );
     }
 
     // collect response objects
     const responseSchemaName = `${pascal(title(operationObject.operationId))}Response`;
     for (const [ , schema ] of Object.entries(operationObject.responses ?? {})) {
+      if (schema instanceof OctetStreamBody) {
+        continue;
+      }
       if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
-        schemaComponent[responseSchemaName] = generateSchema(schema.body) as OpenAPIV3.SchemaObject;
+        schemaComponent[responseSchemaName] = toJsonSchema(
+          schema.body,
+          schema.mimeType
+        );
       }
     }
 
     // wrap up
-    pathObject[method as OpenAPIV3.HttpMethods] = {
+    pathObject[method as OpenAPIV3_1.HttpMethods] = {
       ...(operationObject.tags?.length && {
         tags: Object.values(operationObject.tags).map((v) => v.name)
       }),
@@ -184,7 +212,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           content: intoContentTypeRef(
             operationObject.requestBody.mimeType,
             requestBodySchemaName,
-            operationObject.requestBody.body._def.typeName === z.ZodVoid.name,
+            operationObject.requestBody.body._def.typeName === z.ZodVoid.name || operationObject.requestBody instanceof OctetStreamBody,
             operationObject.requestBody instanceof FormDataBody || operationObject.requestBody instanceof UrlEncodedBody
               ? operationObject.requestBody.encoding
               : undefined
@@ -200,7 +228,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
           content:
             typeof v === "boolean" || typeof v === "string"
               ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-              : intoContentTypeRef(v.mimeType, responseSchemaName, v.body._def.typeName === z.ZodVoid.name)
+              : intoContentTypeRef(v.mimeType, responseSchemaName, v.body._def.typeName === z.ZodVoid.name || v instanceof OctetStreamBody)
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
@@ -227,13 +255,17 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
   return {
     openapi: config.openapi,
     info: config.info,
+    jsonSchemaDialect: config.jsonSchemaDialect ?? JSON_SCHEMA_DIALECTS[0],
     paths: transformedPath,
+    ...(config.webhooks && ({
+      webhooks: config.webhooks,
+    })),
     components: {
       schemas: {
         ...schemaComponent,
-        [GENERAL_API_ERROR_COMPONENT_NAME]: generateSchema(GENERAL_ERROR_SCHEMA),
-        [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA),
-        ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [ pascal(title(k)), generateSchema(v) ])
+        [GENERAL_API_ERROR_COMPONENT_NAME]: toJsonSchema(GENERAL_ERROR_SCHEMA),
+        [VALIDATION_ERROR_COMPONENT_NAME]: toJsonSchema(VALIDATION_ERROR_SCHEMA),
+        ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [ pascal(title(k)), toJsonSchema(v) ])
       },
       ...(collectedApplyingSecuritySet.size && {
         securitySchemes: Object.fromEntries(
@@ -241,9 +273,10 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         )
       })
     },
-    ...(collectedApplyingTagSet.size && {
-      tags: [...collectedApplyingTagSet.values()]
-    })
+    tags: [...collectedApplyingTagSet.values()],
+    ...(config.externalDocs && ({
+      externalDocs: config.externalDocs,
+    })),
   };
 }
 
@@ -254,7 +287,7 @@ function intoContentTypeRef(
   schemaComponentName: string,
   isVoid?: boolean,
   encoding?: FormDataBody["encoding"]
-): Pick<OpenAPIV3.ResponseObject, "content"> {
+): Pick<OpenAPIV3_1.ResponseObject, "content"> {
   if (isVoid) {
     return {
       [contentType]: {}
@@ -273,7 +306,7 @@ function intoContentTypeRef(
             contentType: v.contentType.join(", ")
           }),
           ...(v.headers && {
-            headers: generateSchema(v.headers)["properties"]
+            headers: toJsonSchema(v.headers).properties
           })
         }))
       })
@@ -281,18 +314,26 @@ function intoContentTypeRef(
   };
 }
 
-function intoFormDataBody(schema: OpenAPIV3.SchemaObject): OpenAPIV3.SchemaObject {
-  return {
-    type: schema.type,
-    properties: mapValues(schema.properties ?? {}, (fieldProp) => (
-      "nullable" in fieldProp && fieldProp.nullable && Object.keys(fieldProp).length === 1
-        ? { type: "string", format: "binary" }
-        : fieldProp
-    ))
-  } as OpenAPIV3.SchemaObject;
-}
-
 function getResponseStatusDesc(response: LinzEndpoint["responses"], status: number): string | null {
   const tmp = response[status];
   return typeof tmp === "string" ? tmp : null;
+}
+
+function toJsonSchema(schema: Parameters<typeof zodToJsonSchema>[0], contentType?: string): OpenAPIV3_1.SchemaObject {
+  let jsonSchema = zodToJsonSchema(schema, { target: "jsonSchema2019-09" }) as OpenAPIV3_1.SchemaObject;
+
+  if (contentType === FormDataBody.mimeType) {
+    for (const fieldName in jsonSchema.properties ?? {}) {
+      if (jsonSchema.properties && isEmpty(jsonSchema.properties[fieldName])) {
+        jsonSchema.properties[fieldName] = {
+          type: "string",
+          contentMediaType: "application/octet-stream"
+        };
+      }
+    }
+  }
+
+  jsonSchema["$schema"] = JSON_SCHEMA_DIALECTS[0];
+
+  return jsonSchema;
 }

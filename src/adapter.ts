@@ -6,7 +6,7 @@ import * as url from "url";
 
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
-import type { OpenAPIV3 } from "openapi-types";
+import type { OpenAPIV3_1 } from "openapi-types";
 
 import { bodyParserMiddleware, parseCookies } from "./internal/middlewares";
 import { formatIncomingRequest, responseError } from "./internal/utils";
@@ -29,7 +29,7 @@ type CreateApiConfig = {
   cors: boolean | CorsOptions;
   docs: {
     viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
-    spec: OpenAPIV3.Document;
+    spec: OpenAPIV3_1.Document;
     docsPath: string;
     specPath: string;
     theme?: string;

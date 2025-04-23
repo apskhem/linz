@@ -1,6 +1,6 @@
 import * as http from "http";
 
-import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
+import type { OpenAPIV3_1 as OpenAPIType } from "openapi-types";
 import { mapValues } from "radash";
 import z from "zod";
 

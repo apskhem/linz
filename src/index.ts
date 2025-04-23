@@ -1,5 +1,5 @@
 export * from "@routejs/router";
-export * as oas from "openapi-types";
+export { OpenAPIV3_1 as oas3 } from "openapi-types";
 
 export * from "./adapter";
 export * from "./core";

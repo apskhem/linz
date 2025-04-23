@@ -12,7 +12,7 @@ install();
 const app = new Router();
 
 const swaggerJson = buildJson({
-  openapi: "3.0.3",
+  openapi: "3.1.0",
   info: {
     title: "Linz Bootstrap API",
     version: pkg.version,

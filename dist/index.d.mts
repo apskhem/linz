@@ -1,8 +1,7 @@
 import { Router } from '@routejs/router';
 export * from '@routejs/router';
-import { OpenAPIV3 } from 'openapi-types';
-import * as openapiTypes from 'openapi-types';
-export { openapiTypes as oas };
+import { OpenAPIV3_1 } from 'openapi-types';
+export { OpenAPIV3_1 as oas3 } from 'openapi-types';
 import * as http from 'http';
 import { CorsOptions } from 'cors';
 import z, { z as z$1 } from 'zod';
@@ -11,7 +10,7 @@ type CreateApiConfig = {
     cors: boolean | CorsOptions;
     docs: {
         viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
-        spec: OpenAPIV3.Document;
+        spec: OpenAPIV3_1.Document;
         docsPath: string;
         specPath: string;
         theme?: string;
@@ -22,7 +21,7 @@ declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: P
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
-type Tag = OpenAPIV3.TagObject;
+type Tag = OpenAPIV3_1.TagObject;
 type EncodingItem = {
     contentType?: string[];
     headers?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -107,12 +106,12 @@ declare class HttpResponse<T> {
 }
 interface SecurityConfig {
     name: string;
-    schema: OpenAPIV3.SecuritySchemeObject;
+    schema: OpenAPIV3_1.SecuritySchemeObject;
     handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
 }
 declare class Security implements SecurityConfig {
     readonly name: string;
-    readonly schema: OpenAPIV3.SecuritySchemeObject;
+    readonly schema: OpenAPIV3_1.SecuritySchemeObject;
     readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
     constructor(config: SecurityConfig);
     apply(scopes: string[]): AppliedSecurity;
@@ -190,14 +189,18 @@ declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
     get mimeType(): string;
 }
 
+declare const JSON_SCHEMA_DIALECTS: readonly ["https://json-schema.org/draft/2020-12/schema#", "https://json-schema.org/draft/2019-09/schema#", "https://json-schema.org/draft-07/schema#", "https://json-schema.org/draft-06/schema#", "http://json-schema.org/draft-04/schema#"];
 type BuilderConfig = {
-    openapi: "3.0.3";
-    info: OpenAPIV3.Document["info"];
-    servers?: OpenAPIV3.Document["servers"];
+    openapi: "3.1.0" | "3.1.1";
+    info: OpenAPIV3_1.Document["info"];
+    jsonSchemaDialect?: (typeof JSON_SCHEMA_DIALECTS)[number];
+    servers?: OpenAPIV3_1.Document["servers"];
     paths: LinzEndpointGroup;
+    webhooks?: OpenAPIV3_1.Document["webhooks"];
+    externalDocs?: OpenAPIV3_1.Document["externalDocs"];
     additionalSchemas?: Record<string, z$1.ZodType>;
 };
-declare function buildJson(config: BuilderConfig): OpenAPIV3.Document;
+declare function buildJson(config: BuilderConfig): OpenAPIV3_1.Document;
 
 declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
 declare function applyGroupConfig(group: LinzEndpointGroup, config: {

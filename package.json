@@ -22,15 +22,13 @@
     "lint:fix": "npx oxlint src --fix"
   },
   "dependencies": {
-    "@anatine/zod-openapi": "~1.14.2",
     "@routejs/router": "^3.0.3",
     "cors": "^2.8.5",
     "http-status": "~1.7.4",
+    "jsonschema": "^1.5.0",
     "radash": "^12.1.0",
-    "zod": "^3.24.2"
-  },
-  "peerDependencies": {
-    "openapi3-ts": "^3.2.0"
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

@@ -1,4 +1,4 @@
-import { endpoint, FormDataBody, JsonBody, LinzEndpointGroup } from "@apskhem/linz";
+import { endpoint, FormDataBody, JsonBody, LinzEndpointGroup, OctetStreamBody } from "@apskhem/linz";
 import { applyGroupConfig } from "@apskhem/linz";
 import { z } from "zod";
 import * as fs from "fs";
@@ -26,7 +26,7 @@ const endpoints: LinzEndpointGroup = {
   "post:/echo/simple/body": endpoint({
     requestBody: new JsonBody(
       z.object({
-        echo: z.string()
+        echo: z.string().nullable()
       })
     ),
     responses: {
@@ -37,7 +37,7 @@ const endpoints: LinzEndpointGroup = {
     },
     operationId: "echoBodySimple",
     handler: async ({ body }) => {
-      return { body: body.echo };
+      return { body: body.echo ?? "null!" };
     }
   }),
   "post:/echo/simple/void": endpoint({
@@ -51,6 +51,21 @@ const endpoints: LinzEndpointGroup = {
       404: true
     },
     operationId: "echoVoidSimple",
+    handler: async ({ body }) => {
+      return void {};
+    }
+  }),
+  "post:/echo/tmp": endpoint({
+    requestBody: new JsonBody(
+      z.object({
+        echo: z.string()
+      })
+    ).describe("Echo void result"),
+    responses: {
+      201: new OctetStreamBody(),
+      404: true
+    },
+    operationId: "echoOctetStream",
     handler: async ({ body }) => {
       return void {};
     }
