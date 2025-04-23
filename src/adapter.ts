@@ -89,7 +89,13 @@ export function createApi(
         const validatedReq = formatIncomingRequest(req as any, operatorObject);
 
         // process main handler
-        const tmpResult = await operatorObject.handler(validatedReq, extensions);
+        const tmpResult = await operatorObject.handler(validatedReq, {
+          extensions,
+          req,
+          ...(operatorObject.security && {
+            security: operatorObject.security,
+          }),
+        });
         const result =
           tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
         const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);

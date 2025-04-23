@@ -47,7 +47,11 @@ type LinzEndpoint = {
     };
     deprecated?: boolean;
     security?: AppliedSecurity[];
-    handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
+    handler: (message: Readonly<HTTPRequest>, ctx: {
+        security?: AppliedSecurity[];
+        extensions: Extensions;
+        req: http.IncomingMessage;
+    }) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 type MergeRecordType<T, U> = {
     [K in keyof T]: T[K] | U;
@@ -83,13 +87,17 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
     responses: TResponse;
     deprecated?: boolean;
     security?: AppliedSecurity[];
-    handler: (req: Readonly<{
+    handler: (message: Readonly<{
         queries: z.infer<TQuery>;
         headers: z.infer<THeader>;
         params: z.infer<TPath>;
         cookies: z.infer<TCookie>;
         body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
-    }>, extensions: TExt) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
+    }>, ctx: {
+        security?: AppliedSecurity[];
+        extensions: TExt;
+        req: http.IncomingMessage;
+    }) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
 declare class HttpResponse<T> {
     readonly payload: {

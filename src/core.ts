@@ -49,8 +49,12 @@ export type LinzEndpoint = {
   deprecated?: boolean;
   security?: AppliedSecurity[];
   handler: (
-    req: Readonly<HTTPRequest>,
-    extensions: Extensions
+    message: Readonly<HTTPRequest>,
+    ctx: {
+      security?: AppliedSecurity[];
+      extensions: Extensions;
+      req: http.IncomingMessage;
+    }
   ) => Promise<HttpResponse<any> | HttpResponse<any>["payload"]["body"]>;
 };
 
@@ -113,14 +117,18 @@ export function endpoint<
   deprecated?: boolean;
   security?: AppliedSecurity[];
   handler: (
-    req: Readonly<{
+    message: Readonly<{
       queries: z.infer<TQuery>;
       headers: z.infer<THeader>;
       params: z.infer<TPath>;
       cookies: z.infer<TCookie>;
       body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
     }>,
-    extensions: TExt
+    ctx: {
+      security?: AppliedSecurity[];
+      extensions: TExt;
+      req: http.IncomingMessage;
+    }
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {
   return {
