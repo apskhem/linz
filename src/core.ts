@@ -34,7 +34,7 @@ export type LinzEndpoint = {
   description?: string;
   operationId: string;
   parameters?: {
-    query?: z.ZodObject<Record<string, ZodParameterTypes>>;
+    query?: z.ZodObject<Record<string, z.ZodArray<ZodParameterTypes>>>;
     header?: z.ZodObject<Record<string, ZodParameterTypes>>;
     path?: z.ZodObject<Record<string, ZodParameterTypes>>;
     cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -82,8 +82,12 @@ export type LinzEndpointGroup = {
 };
 
 export type HTTPRequest = {
+  /**
+   * A parsed payload from a HTTP payload body,
+   * `null` indicates that the body is empty or `Content-Length: 0`.
+   */
   body: any | null;
-  queries: Record<string, string>;
+  queries: Record<string, string[]>;
   params: Record<string, string>;
   headers: Record<string, string>;
   cookies: Record<string, string>;
@@ -275,7 +279,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
 type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
 
 export class FormDataBody<
-  B extends z.ZodObject<Record<string, FormDataValidator>> = any,
+  B extends z.ZodObject<Record<string, z.ZodArray<FormDataValidator>>> = any,
   K extends keyof z.infer<B> = any,
 > extends SenderBody<B> {
   static readonly mimeType: string = "multipart/form-data";

@@ -60,10 +60,10 @@ export function formatIncomingRequest(
 
   return {
     body: resultBody?.data ?? null,
-    queries: (resultQuery?.data as Record<string, string>) ?? {},
-    params: (resultPath?.data as Record<string, string>) ?? {},
-    headers: (resultHeader?.data as Record<string, string>) ?? {},
-    cookies: (resultCookie?.data as Record<string, string>) ?? {},
+    queries: (resultQuery?.data as HTTPRequest["queries"]) ?? {},
+    params: (resultPath?.data as HTTPRequest["params"]) ?? {},
+    headers: (resultHeader?.data as HTTPRequest["headers"]) ?? {},
+    cookies: (resultCookie?.data as HTTPRequest["cookies"]) ?? {},
   };
 }
 

@@ -35,7 +35,7 @@ type LinzEndpoint = {
     description?: string;
     operationId: string;
     parameters?: {
-        query?: z.ZodObject<Record<string, ZodParameterTypes>>;
+        query?: z.ZodObject<Record<string, z.ZodArray<ZodParameterTypes>>>;
         header?: z.ZodObject<Record<string, ZodParameterTypes>>;
         path?: z.ZodObject<Record<string, ZodParameterTypes>>;
         cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -68,7 +68,7 @@ type LinzEndpointGroup = {
 };
 type HTTPRequest = {
     body: any | null;
-    queries: Record<string, string>;
+    queries: Record<string, string[]>;
     params: Record<string, string>;
     headers: Record<string, string>;
     cookies: Record<string, string>;
@@ -159,7 +159,7 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sende
     get mimeType(): string;
 }
 type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
-declare class FormDataBody<B extends z.ZodObject<Record<string, FormDataValidator>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class FormDataBody<B extends z.ZodObject<Record<string, z.ZodArray<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType: string;

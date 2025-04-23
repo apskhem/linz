@@ -1,7 +1,6 @@
 import * as http from "http";
 
 import { parse as parseContentType } from "fast-content-type-parse";
-import { mapValues } from "radash";
 
 import * as multipart from "./multipart";
 import { responseError } from "./utils";
@@ -51,7 +50,7 @@ export function bodyParserMiddleware(
 
       const parts = multipart.parse(rawBody, boundary);
 
-      const mergedItems = {} as Record<string, (string | File)[]>;
+      const mergedItems: Record<string, (string | File)[]> = {};
       for (const part of parts) {
         if (!part.name) {
           continue;
@@ -72,32 +71,8 @@ export function bodyParserMiddleware(
         (mergedItems[part.name] ??= []).push(data);
       }
 
-      // validate
-      const err = [];
-      for (const [key, values = []] of Object.entries(mergedItems)) {
-        if (values.length > 1) {
-          err.push({
-            field: key,
-            message: "Duplicated key",
-          });
-        }
-      }
-      if (err.length) {
-        return responseError(
-          res,
-          400,
-          JSON.stringify({
-            in: "body",
-            result: err.map(({ field, message }) => ({
-              path: [field],
-              message,
-            })),
-          })
-        );
-      }
-
       Object.assign(req, {
-        body: mapValues(mergedItems, (v) => v[0]),
+        body: mergedItems,
       });
 
       return next();
@@ -105,30 +80,13 @@ export function bodyParserMiddleware(
       const data = Buffer.concat(bufferChunks).toString("utf-8");
       const dataUrl = new URLSearchParams(data);
 
-      const duplicatedKeys: string[] = [];
-      Array.from(dataUrl.keys()).reduce((acc, x) => {
-        if (acc.has(x)) {
-          duplicatedKeys.push(x);
-        }
-        return acc.add(x);
-      }, new Set<string>());
-
-      if (duplicatedKeys.length) {
-        return responseError(
-          res,
-          400,
-          JSON.stringify({
-            in: "body",
-            result: duplicatedKeys.map((fieldName) => ({
-              path: [fieldName],
-              message: "Duplicated key",
-            })),
-          })
-        );
+      const mergedItems: Record<string, string[]> = {};
+      for (const [key, value] of dataUrl.entries()) {
+        (mergedItems[key] ??= []).push(value);
       }
 
       Object.assign(req, {
-        body: Object.fromEntries(dataUrl),
+        body: mergedItems,
       });
 
       return next();
