@@ -199,7 +199,7 @@ declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
     get mimeType(): string;
 }
 
-declare const JSON_SCHEMA_DIALECTS: readonly ["https://json-schema.org/draft/2020-12/schema#", "https://json-schema.org/draft/2019-09/schema#", "https://json-schema.org/draft-07/schema#", "https://json-schema.org/draft-06/schema#", "http://json-schema.org/draft-04/schema#"];
+declare const JSON_SCHEMA_DIALECTS: readonly ["https://spec.openapis.org/oas/3.1/dialect/base", "https://spec.openapis.org/oas/3.1/dialect/2024-11-10"];
 type BuilderConfig = {
     openapi: "3.1.0" | "3.1.1";
     info: OpenAPIV3_1.Document["info"];

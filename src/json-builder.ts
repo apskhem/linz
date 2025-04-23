@@ -67,11 +67,8 @@ const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
 }).describe("An error related to the validation process with more detailed information");
 
 const JSON_SCHEMA_DIALECTS = [
-  "https://json-schema.org/draft/2020-12/schema#",
-  "https://json-schema.org/draft/2019-09/schema#",
-  "https://json-schema.org/draft-07/schema#",
-  "https://json-schema.org/draft-06/schema#",
-  "http://json-schema.org/draft-04/schema#",
+  "https://spec.openapis.org/oas/3.1/dialect/base",
+  "https://spec.openapis.org/oas/3.1/dialect/2024-11-10",
 ] as const;
 
 /**
@@ -121,11 +118,10 @@ export type BuilderConfig = {
  */
 export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
   const transformedPath: OpenAPIV3_1.Document["paths"] = {};
-
+  const collectedApplyingSecuritySet = new Set<Security>();
+  const collectedApplyingTagSet = new Set<OpenAPIV3_1.TagObject>();
   const schemaComponent: NonNullable<OpenAPIV3_1.ComponentsObject["schemas"]> = {};
 
-  let collectedApplyingSecuritySet = new Set<Security>();
-  let collectedApplyingTagSet = new Set<OpenAPIV3_1.TagObject>();
   for (const [methodPath, operationObject] of Object.entries(config.paths)) {
     const [method, ...pathParts] = methodPath.split(":");
     const { path } = convertPathParams(pathParts.join(":"));
@@ -338,7 +334,7 @@ function toJsonSchema(
 ): OpenAPIV3_1.SchemaObject {
   let jsonSchema = zodToJsonSchema(schema, {
     target: "jsonSchema2019-09",
-    $refStrategy: "none"
+    $refStrategy: "none",
   }) as OpenAPIV3_1.SchemaObject;
 
   if (contentType === FormDataBody.mimeType) {
@@ -352,7 +348,7 @@ function toJsonSchema(
     }
   }
 
-  jsonSchema["$schema"] = JSON_SCHEMA_DIALECTS[0];
+  delete jsonSchema["$schema"];
 
   return jsonSchema;
 }
