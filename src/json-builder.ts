@@ -5,67 +5,73 @@ import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
 
-import { FormDataBody, JsonBody, LinzEndpoint, LinzEndpointGroup, OctetStreamBody, Security, UrlEncodedBody } from ".";
+import {
+  FormDataBody,
+  JsonBody,
+  LinzEndpoint,
+  LinzEndpointGroup,
+  OctetStreamBody,
+  Security,
+  UrlEncodedBody,
+} from ".";
 import zodToJsonSchema from "zod-to-json-schema";
 
 const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
 const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
 
-const ZOD_ISSUE_SCHEMA = z.object({
-  code: z.enum([
-    "invalid_type",
-    "invalid_literal",
-    "unrecognized_keys",
-    "invalid_union",
-    "invalid_union_discriminator",
-    "invalid_enum_value",
-    "invalid_arguments",
-    "invalid_return_type",
-    "invalid_date",
-    "invalid_string",
-    "too_small",
-    "too_big",
-    "invalid_intersection_types",
-    "not_multiple_of",
-    "not_finite",
-    "custom"
-  ]),
-  path: z.union([z.string(), z.number().int().min(0)]).array(),
-  fatal: z.boolean().optional(),
-  message: z.string()
-}).passthrough();
+const ZOD_ISSUE_SCHEMA = z
+  .object({
+    code: z.enum([
+      "invalid_type",
+      "invalid_literal",
+      "unrecognized_keys",
+      "invalid_union",
+      "invalid_union_discriminator",
+      "invalid_enum_value",
+      "invalid_arguments",
+      "invalid_return_type",
+      "invalid_date",
+      "invalid_string",
+      "too_small",
+      "too_big",
+      "invalid_intersection_types",
+      "not_multiple_of",
+      "not_finite",
+      "custom",
+    ]),
+    path: z.union([z.string(), z.number().int().min(0)]).array(),
+    fatal: z.boolean().optional(),
+    message: z.string(),
+  })
+  .passthrough();
 
 const ZOD_ERROR_SCHEMA = z.object({
-  in: z.enum([ "body", "queries", "params", "headers", "cookies" ])
+  in: z
+    .enum(["body", "queries", "params", "headers", "cookies"])
     .describe("The part of a request where data validation failed"),
-  result: z.array(ZOD_ISSUE_SCHEMA)
-    .describe("An array of error items")
+  result: z.array(ZOD_ISSUE_SCHEMA).describe("An array of error items"),
 });
 
-const GENERAL_ERROR_SCHEMA = z.object({
-  statusCode: z.number().int().min(100).max(599)
-    .describe("The HTTP response status code"),
-  message: z.string()
-    .describe("The message associated with the error")
-})
+const GENERAL_ERROR_SCHEMA = z
+  .object({
+    statusCode: z.number().int().min(100).max(599).describe("The HTTP response status code"),
+    message: z.string().describe("The message associated with the error"),
+  })
   .describe("A general HTTP error response");
 
 const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
   message: z.union([
-    z.array(ZOD_ERROR_SCHEMA)
-      .describe("An array of error schemas detailing validation issues"),
-    z.string()
-      .describe("Alternatively, a simple error message")
-  ])
-})
-  .describe("An error related to the validation process with more detailed information");
+    z.array(ZOD_ERROR_SCHEMA).describe("An array of error schemas detailing validation issues"),
+    z.string().describe("Alternatively, a simple error message"),
+  ]),
+}).describe("An error related to the validation process with more detailed information");
 
 const JSON_SCHEMA_DIALECTS = [
   "https://json-schema.org/draft/2020-12/schema#",
   "https://json-schema.org/draft/2019-09/schema#",
   "https://json-schema.org/draft-07/schema#",
   "https://json-schema.org/draft-06/schema#",
-  "http://json-schema.org/draft-04/schema#"
+  "http://json-schema.org/draft-04/schema#",
 ] as const;
 
 /**
@@ -83,7 +89,7 @@ export type BuilderConfig = {
   /**
    * The default value for the $schema keyword within Schema Objects contained within this OAS document.
    */
-  jsonSchemaDialect?: (typeof JSON_SCHEMA_DIALECTS)[number],
+  jsonSchemaDialect?: (typeof JSON_SCHEMA_DIALECTS)[number];
   /**
    * A list of server definitions describing where the API can be accessed.
    */
@@ -120,8 +126,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
 
   let collectedApplyingSecuritySet = new Set<Security>();
   let collectedApplyingTagSet = new Set<OpenAPIV3_1.TagObject>();
-  for (const [ methodPath, operationObject ] of Object.entries(config.paths)) {
-    const [ method, ...pathParts ] = methodPath.split(":");
+  for (const [methodPath, operationObject] of Object.entries(config.paths)) {
+    const [method, ...pathParts] = methodPath.split(":");
     const { path } = convertPathParams(pathParts.join(":"));
 
     const parameterObject: OpenAPIV3_1.ParameterObject[] = [];
@@ -135,10 +141,10 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
     }
 
     // collect parameters
-    for (const [ type, schema ] of Object.entries(operationObject.parameters ?? {})) {
+    for (const [type, schema] of Object.entries(operationObject.parameters ?? {})) {
       const { properties = {}, required = [] } = toJsonSchema(schema);
 
-      for (const [ name, itemSchema ] of Object.entries(properties)) {
+      for (const [name, itemSchema] of Object.entries(properties)) {
         if ("$ref" in itemSchema) {
           continue;
         }
@@ -151,7 +157,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
           in: type,
           ...(description && { description }),
           ...(isItemRequired && { required: isItemRequired }),
-          schema: schema as OpenAPIV3.SchemaObject
+          schema: schema as OpenAPIV3.SchemaObject,
         });
       }
     }
@@ -159,9 +165,9 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
     // collect body objects
     const requestBodySchemaName = `${pascal(title(operationObject.operationId))}RequestBody`;
     if (
-      operationObject.requestBody
-      && operationObject.requestBody.body._def.typeName !== z.ZodVoid.name
-      && !(operationObject.requestBody instanceof OctetStreamBody)
+      operationObject.requestBody &&
+      operationObject.requestBody.body._def.typeName !== z.ZodVoid.name &&
+      !(operationObject.requestBody instanceof OctetStreamBody)
     ) {
       schemaComponent[requestBodySchemaName] = toJsonSchema(
         operationObject.requestBody.body,
@@ -171,82 +177,86 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
 
     // collect response objects
     const responseSchemaName = `${pascal(title(operationObject.operationId))}Response`;
-    for (const [ , schema ] of Object.entries(operationObject.responses ?? {})) {
+    for (const [, schema] of Object.entries(operationObject.responses ?? {})) {
       if (schema instanceof OctetStreamBody) {
         continue;
       }
       if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
-        schemaComponent[responseSchemaName] = toJsonSchema(
-          schema.body,
-          schema.mimeType
-        );
+        schemaComponent[responseSchemaName] = toJsonSchema(schema.body, schema.mimeType);
       }
     }
 
     // wrap up
     pathObject[method as OpenAPIV3_1.HttpMethods] = {
       ...(operationObject.tags?.length && {
-        tags: Object.values(operationObject.tags).map((v) => v.name)
+        tags: Object.values(operationObject.tags).map((v) => v.name),
       }),
       summary: operationObject.summary || operationObject.operationId,
       ...(operationObject.description && {
-        description: operationObject.description
+        description: operationObject.description,
       }),
       operationId: operationObject.operationId,
       ...(operationObject.deprecated && {
-        deprecated: operationObject.deprecated
+        deprecated: operationObject.deprecated,
       }),
       ...(!isEmpty(parameterObject) && {
-        parameters: parameterObject
+        parameters: parameterObject,
       }),
       ...(operationObject.security?.length && {
         security: operationObject.security.map((sec) => ({
-          [sec.security.name]: sec.scopes
-        }))
+          [sec.security.name]: sec.scopes,
+        })),
       }),
       ...(operationObject.requestBody && {
         requestBody: {
           ...(operationObject.requestBody.description && {
-            description: operationObject.requestBody.description
+            description: operationObject.requestBody.description,
           }),
           content: intoContentTypeRef(
             operationObject.requestBody.mimeType,
             requestBodySchemaName,
-            operationObject.requestBody.body._def.typeName === z.ZodVoid.name || operationObject.requestBody instanceof OctetStreamBody,
-            operationObject.requestBody instanceof FormDataBody || operationObject.requestBody instanceof UrlEncodedBody
+            operationObject.requestBody.body._def.typeName === z.ZodVoid.name ||
+              operationObject.requestBody instanceof OctetStreamBody,
+            operationObject.requestBody instanceof FormDataBody ||
+              operationObject.requestBody instanceof UrlEncodedBody
               ? operationObject.requestBody.encoding
               : undefined
           ),
-          required: !operationObject.requestBody.body.isOptional()
-        }
+          required: !operationObject.requestBody.body.isOptional(),
+        },
       }),
       responses: {
         ...mapValues(shake(operationObject.responses), (v, k) => ({
-          description: (typeof v === "string" ? v : null)
-            || String(httpStatus[`${k}` as keyof typeof httpStatus])
-            || "No description",
+          description:
+            (typeof v === "string" ? v : null) ||
+            String(httpStatus[`${k}` as keyof typeof httpStatus]) ||
+            "No description",
           content:
             typeof v === "boolean" || typeof v === "string"
               ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-              : intoContentTypeRef(v.mimeType, responseSchemaName, v.body._def.typeName === z.ZodVoid.name || v instanceof OctetStreamBody)
+              : intoContentTypeRef(
+                  v.mimeType,
+                  responseSchemaName,
+                  v.body._def.typeName === z.ZodVoid.name || v instanceof OctetStreamBody
+                ),
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
             description: getResponseStatusDesc(operationObject.responses, 400) || httpStatus[400],
-            content: intoContentTypeRef(JsonBody.mimeType, VALIDATION_ERROR_COMPONENT_NAME)
-          }
+            content: intoContentTypeRef(JsonBody.mimeType, VALIDATION_ERROR_COMPONENT_NAME),
+          },
         }),
         ...(operationObject.security?.length && {
           "401": {
             description: getResponseStatusDesc(operationObject.responses, 401) || httpStatus[401],
-            content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-          }
+            content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME),
+          },
         }),
         "500": {
           description: getResponseStatusDesc(operationObject.responses, 500) || httpStatus[500],
-          content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
-        }
-      }
+          content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME),
+        },
+      },
     };
 
     transformedPath[path] = pathObject;
@@ -257,26 +267,29 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
     info: config.info,
     jsonSchemaDialect: config.jsonSchemaDialect ?? JSON_SCHEMA_DIALECTS[0],
     paths: transformedPath,
-    ...(config.webhooks && ({
+    ...(config.webhooks && {
       webhooks: config.webhooks,
-    })),
+    }),
     components: {
       schemas: {
         ...schemaComponent,
         [GENERAL_API_ERROR_COMPONENT_NAME]: toJsonSchema(GENERAL_ERROR_SCHEMA),
         [VALIDATION_ERROR_COMPONENT_NAME]: toJsonSchema(VALIDATION_ERROR_SCHEMA),
-        ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [ pascal(title(k)), toJsonSchema(v) ])
+        ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [
+          pascal(title(k)),
+          toJsonSchema(v),
+        ]),
       },
       ...(collectedApplyingSecuritySet.size && {
         securitySchemes: Object.fromEntries(
           [...collectedApplyingSecuritySet.values()].map((sec) => [sec.name, sec.schema])
-        )
-      })
+        ),
+      }),
     },
     tags: [...collectedApplyingTagSet.values()],
-    ...(config.externalDocs && ({
+    ...(config.externalDocs && {
       externalDocs: config.externalDocs,
-    })),
+    }),
   };
 }
 
@@ -290,27 +303,27 @@ function intoContentTypeRef(
 ): Pick<OpenAPIV3_1.ResponseObject, "content"> {
   if (isVoid) {
     return {
-      [contentType]: {}
+      [contentType]: {},
     };
   }
 
   return {
     [contentType]: {
       schema: {
-        $ref: `#/components/schemas/${schemaComponentName}`
+        $ref: `#/components/schemas/${schemaComponentName}`,
       },
       ...(encoding && {
         encoding: mapValues(encoding, (v) => ({
           ...v,
           ...(v.contentType && {
-            contentType: v.contentType.join(", ")
+            contentType: v.contentType.join(", "),
           }),
           ...(v.headers && {
-            headers: toJsonSchema(v.headers).properties
-          })
-        }))
-      })
-    }
+            headers: toJsonSchema(v.headers).properties,
+          }),
+        })),
+      }),
+    },
   };
 }
 
@@ -319,15 +332,20 @@ function getResponseStatusDesc(response: LinzEndpoint["responses"], status: numb
   return typeof tmp === "string" ? tmp : null;
 }
 
-function toJsonSchema(schema: Parameters<typeof zodToJsonSchema>[0], contentType?: string): OpenAPIV3_1.SchemaObject {
-  let jsonSchema = zodToJsonSchema(schema, { target: "jsonSchema2019-09" }) as OpenAPIV3_1.SchemaObject;
+function toJsonSchema(
+  schema: Parameters<typeof zodToJsonSchema>[0],
+  contentType?: string
+): OpenAPIV3_1.SchemaObject {
+  let jsonSchema = zodToJsonSchema(schema, {
+    target: "jsonSchema2019-09",
+  }) as OpenAPIV3_1.SchemaObject;
 
   if (contentType === FormDataBody.mimeType) {
     for (const fieldName in jsonSchema.properties ?? {}) {
       if (jsonSchema.properties && isEmpty(jsonSchema.properties[fieldName])) {
         jsonSchema.properties[fieldName] = {
           type: "string",
-          contentMediaType: "application/octet-stream"
+          contentMediaType: "application/octet-stream",
         };
       }
     }

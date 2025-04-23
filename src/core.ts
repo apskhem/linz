@@ -21,11 +21,11 @@ type ZodParameterTypes =
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIType.TagObject;
 type EncodingItem = {
-  contentType?: string[],
-  headers?: z.ZodObject<Record<string, ZodParameterTypes>>,
-  style?: string,
-  explode?: string,
-  allowReserved?: string,
+  contentType?: string[];
+  headers?: z.ZodObject<Record<string, ZodParameterTypes>>;
+  style?: string;
+  explode?: string;
+  allowReserved?: string;
 };
 
 export type LinzEndpoint = {
@@ -60,12 +60,15 @@ type MergeRecordType<T, U> = {
 type MergeZodValues<T> = {
   [K in keyof T]: T[K] extends z.ZodType
     ? z.infer<T[K]>
-    : (T[K] extends SenderBody ? z.infer<T[K]["body"]> : never)
+    : T[K] extends SenderBody
+      ? z.infer<T[K]["body"]>
+      : never;
 }[keyof T];
-type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>>
-  = MergeZodValues<T> extends infer R ? R : never;
+type MergedResponse<
+  T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>,
+> = MergeZodValues<T> extends infer R ? R : never;
 
-export const METHODS = [ "get", "post", "put", "patch", "delete" ] as const;
+export const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 
 export type HttpMethod = (typeof METHODS)[number];
 
@@ -87,8 +90,13 @@ export function endpoint<
   THeader extends NonNullable<Required<LinzEndpoint>["parameters"]["header"]>,
   TPath extends NonNullable<Required<LinzEndpoint>["parameters"]["path"]>,
   TCookie extends NonNullable<Required<LinzEndpoint>["parameters"]["cookie"]>,
-  TBody extends NonNullable<LinzEndpoint["requestBody"]> | ConstructorParameters<typeof JsonBody>[0],
-  TResponse extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>
+  TBody extends
+    | NonNullable<LinzEndpoint["requestBody"]>
+    | ConstructorParameters<typeof JsonBody>[0],
+  TResponse extends MergeRecordType<
+    LinzEndpoint["responses"],
+    ConstructorParameters<typeof JsonBody>[0]
+  >,
 >(endpoint: {
   tags?: Tag[];
   summary?: string;
@@ -98,7 +106,7 @@ export function endpoint<
     query?: TQuery;
     header?: THeader;
     path?: TPath;
-    cookie?: TCookie
+    cookie?: TCookie;
   };
   requestBody?: TBody;
   responses: TResponse;
@@ -106,26 +114,27 @@ export function endpoint<
   security?: AppliedSecurity[];
   handler: (
     req: Readonly<{
-      queries: z.infer<TQuery>
-      headers: z.infer<THeader>
-      params: z.infer<TPath>
-      cookies: z.infer<TCookie>
-      body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>
+      queries: z.infer<TQuery>;
+      headers: z.infer<THeader>;
+      params: z.infer<TPath>;
+      cookies: z.infer<TCookie>;
+      body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
     }>,
     extensions: TExt
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {
   return {
     ...endpoint,
-    ...(endpoint.requestBody && !(endpoint.requestBody instanceof SenderBody) && {
-      requestBody: new JsonBody(endpoint.requestBody)
-    }),
+    ...(endpoint.requestBody &&
+      !(endpoint.requestBody instanceof SenderBody) && {
+        requestBody: new JsonBody(endpoint.requestBody),
+      }),
     responses: Object.fromEntries(
-      Object.entries(endpoint.responses).map(([ k, v ]) => [
+      Object.entries(endpoint.responses).map(([k, v]) => [
         k,
-        v instanceof z.ZodType ? new JsonBody(v) : v
+        v instanceof z.ZodType ? new JsonBody(v) : v,
       ])
-    )
+    ),
   } as LinzEndpoint;
 }
 
@@ -136,25 +145,31 @@ export class HttpResponse<T> {
       readonly status?: number;
       readonly body?: T | ReadableStream;
     }
-  ) { }
+  ) {}
 
   public static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void> {
-    return headers
-      ? new HttpResponse({ headers, status })
-      : new HttpResponse({ status });
+    return headers ? new HttpResponse({ headers, status }) : new HttpResponse({ status });
   }
 }
 
 interface SecurityConfig {
   name: string;
   schema: OpenAPIType.SecuritySchemeObject;
-  handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+  handler: (
+    req: Readonly<http.IncomingMessage>,
+    scopes: string[],
+    extensions: Extensions
+  ) => Promise<void>;
 }
 
 export class Security implements SecurityConfig {
   public readonly name: string;
   public readonly schema: OpenAPIType.SecuritySchemeObject;
-  public readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+  public readonly handler: (
+    req: Readonly<http.IncomingMessage>,
+    scopes: string[],
+    extensions: Extensions
+  ) => Promise<void>;
 
   constructor(config: SecurityConfig) {
     this.name = config.name;
@@ -240,9 +255,7 @@ abstract class SenderBody<B extends z.ZodType = any> {
 export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
   static readonly mimeType: string = "application/json";
 
-  constructor(
-    public readonly body: B
-  ) {
+  constructor(public readonly body: B) {
     super();
   }
 
@@ -258,10 +271,8 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
 type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
 
 export class FormDataBody<
-  B extends z.ZodObject<
-    Record<string, FormDataValidator>
-  > = any,
-  K extends keyof z.infer<B> = any
+  B extends z.ZodObject<Record<string, FormDataValidator>> = any,
+  K extends keyof z.infer<B> = any,
 > extends SenderBody<B> {
   static readonly mimeType: string = "multipart/form-data";
 
@@ -282,9 +293,9 @@ export class FormDataBody<
     return [
       `${FormDataBody.mimeType}; boundary=${boundary}`,
       await encode(
-        mapValues(data, (vx) => [ vx instanceof File ? vx : String(vx) ]),
+        mapValues(data, (vx) => [vx instanceof File ? vx : String(vx)]),
         boundary
-      )
+      ),
     ];
   }
 
@@ -298,7 +309,7 @@ export class UrlEncodedBody<
     Record<string, ZodParameterTypes>
     // FIXME: should also accept `URLSearchParams`?
   > = any,
-  K extends keyof z.infer<B> = any
+  K extends keyof z.infer<B> = any,
 > extends SenderBody<B> {
   static readonly mimeType: string = "application/x-www-form-urlencoded";
 
@@ -314,12 +325,7 @@ export class UrlEncodedBody<
       new URLSearchParams(
         data instanceof URLSearchParams
           ? data
-          : Object.fromEntries(
-            Object.entries(data).map(([ k, v ]) => [
-              k,
-              String(v)
-            ])
-          )
+          : Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
       ).toString()
     );
   }
@@ -329,12 +335,12 @@ export class UrlEncodedBody<
   }
 }
 
-export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
+export class OctetStreamBody<
+  B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any,
+> extends SenderBody<B> {
   static readonly mimeType: string = "application/octet-stream";
 
-  constructor(
-    public readonly body: B = z.instanceof(Buffer) as B
-  ) {
+  constructor(public readonly body: B = z.instanceof(Buffer) as B) {
     super();
   }
 
@@ -350,9 +356,7 @@ export class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> =
 export class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
   static readonly mimeType: string = "text/plain";
 
-  constructor(
-    public readonly body: B = z.string() as B
-  ) {
+  constructor(public readonly body: B = z.string() as B) {
     super();
   }
 

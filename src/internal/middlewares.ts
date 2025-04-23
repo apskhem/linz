@@ -5,7 +5,11 @@ import { mapValues } from "radash";
 import * as multipart from "./multipart";
 import { responseError } from "./utils";
 
-export function bodyParserMiddleware(req: http.IncomingMessage, res: http.ServerResponse, next: () => any): void {
+export function bodyParserMiddleware(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  next: () => any
+): void {
   const bufferChunks: Buffer[] = [];
 
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
@@ -19,7 +23,7 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
       try {
         if (rawBody.length) {
           Object.assign(req, {
-            body: JSON.parse(rawBody.toString("utf-8"))
+            body: JSON.parse(rawBody.toString("utf-8")),
           });
         }
       } catch (err) {
@@ -37,7 +41,7 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
       }
 
       const parts = multipart.parse(rawBody, boundary);
-      
+
       const mergedItems = {} as Record<string, (string | File)[]>;
       for (const part of parts) {
         if (!part.name) {
@@ -45,9 +49,15 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
         }
 
         const data = part.filename
-          ? new File([ part.data ], part.filename, part.type ? {
-            type: part.type
-          } : {})
+          ? new File(
+              [part.data],
+              part.filename,
+              part.type
+                ? {
+                    type: part.type,
+                  }
+                : {}
+            )
           : part.data.toString("utf-8");
 
         (mergedItems[part.name] ??= []).push(data);
@@ -55,11 +65,11 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
 
       // validate
       const err = [];
-      for (const [ key, values = [] ] of Object.entries(mergedItems)) {
+      for (const [key, values = []] of Object.entries(mergedItems)) {
         if (values.length > 1) {
           err.push({
             field: key,
-            message: "Duplicated key"
+            message: "Duplicated key",
           });
         }
       }
@@ -70,15 +80,15 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
           JSON.stringify({
             in: "body",
             result: err.map(({ field, message }) => ({
-              path: [ field ],
-              message
-            }))
+              path: [field],
+              message,
+            })),
           })
         );
       }
 
       Object.assign(req, {
-        body: mapValues(mergedItems, (v) => v[0])
+        body: mapValues(mergedItems, (v) => v[0]),
       });
 
       return next();
@@ -101,26 +111,30 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
           JSON.stringify({
             in: "body",
             result: duplicatedKeys.map((fieldName) => ({
-              path: [ fieldName ],
-              message: "Duplicated key"
-            }))
+              path: [fieldName],
+              message: "Duplicated key",
+            })),
           })
         );
       }
 
       Object.assign(req, {
-        body: Object.fromEntries(dataUrl)
+        body: Object.fromEntries(dataUrl),
       });
 
       return next();
     } else if (req.headers["content-type"] === "application/octet-stream") {
       Object.assign(req, {
-        body: Buffer.concat(bufferChunks)
+        body: Buffer.concat(bufferChunks),
       });
 
       return next();
     } else {
-      return responseError(res, 415, `'${req.headers["content-type"]}' content type is not supported`);
+      return responseError(
+        res,
+        415,
+        `'${req.headers["content-type"]}' content type is not supported`
+      );
     }
   });
 
@@ -130,10 +144,15 @@ export function bodyParserMiddleware(req: http.IncomingMessage, res: http.Server
 }
 
 export function parseCookies(cookieHeader = "") {
-  return cookieHeader.split(";").reduce((cookies, cookie) => {
-    const [ name, ...rest ] = cookie.trim().split("=");
-    if (!name) {return cookies;}
-    cookies[name] = decodeURIComponent(rest.join("="));
-    return cookies;
-  }, {} as Record<string, string>);
+  return cookieHeader.split(";").reduce(
+    (cookies, cookie) => {
+      const [name, ...rest] = cookie.trim().split("=");
+      if (!name) {
+        return cookies;
+      }
+      cookies[name] = decodeURIComponent(rest.join("="));
+      return cookies;
+    },
+    {} as Record<string, string>
+  );
 }

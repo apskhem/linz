@@ -3,13 +3,16 @@ import * as http from "http";
 import { type HTTPRequest, type LinzEndpoint, ValidationError } from "../core";
 
 type AdditionalRequestObjects = {
-  body: any,
+  body: any;
   query: any;
   params: any;
   cookies: any;
 };
 
-export function formatIncomingRequest(req: http.IncomingMessage & AdditionalRequestObjects, validator: LinzEndpoint): Readonly<HTTPRequest> {
+export function formatIncomingRequest(
+  req: http.IncomingMessage & AdditionalRequestObjects,
+  validator: LinzEndpoint
+): Readonly<HTTPRequest> {
   const errors = {} as ConstructorParameters<typeof ValidationError>[0];
 
   const body = tryCatch(
@@ -42,11 +45,16 @@ export function formatIncomingRequest(req: http.IncomingMessage & AdditionalRequ
     queries: (queries as Record<string, string>) ?? {},
     params: (params as Record<string, string>) ?? {},
     headers: (headers as Record<string, string>) ?? {},
-    cookies: (cookies as Record<string, string>) ?? {}
+    cookies: (cookies as Record<string, string>) ?? {},
   };
 }
 
-export function responseError(res: http.ServerResponse, statusCode: number, message: string, loggerScope?: string): void {
+export function responseError(
+  res: http.ServerResponse,
+  statusCode: number,
+  message: string,
+  loggerScope?: string
+): void {
   if (typeof loggerScope === "string") {
     if (loggerScope) {
       console.error(`[error:${loggerScope}]: ${message}`);
@@ -60,7 +68,7 @@ export function responseError(res: http.ServerResponse, statusCode: number, mess
     .end(JSON.stringify({ statusCode, message }));
 }
 
-export function convertPathParams(path: string): { path: string, params: string[] } {
+export function convertPathParams(path: string): { path: string; params: string[] } {
   const paramRegex = /:([^/]+)/g;
 
   const newPath = cleanPath(path).replace(paramRegex, "{$1}");
@@ -73,7 +81,7 @@ export function convertPathParams(path: string): { path: string, params: string[
 
   return {
     path: newPath,
-    params: paramNames
+    params: paramNames,
   };
 }
 

@@ -18,11 +18,11 @@ import {
   HttpResponse,
   type LinzEndpointGroup,
   METHODS,
-  ValidationError
+  ValidationError,
 } from "./";
 
 const JSON_HEADER: http.OutgoingHttpHeaders = {
-  "content-type": "application/json"
+  "content-type": "application/json",
 };
 
 type CreateApiConfig = {
@@ -33,7 +33,7 @@ type CreateApiConfig = {
     docsPath: string;
     specPath: string;
     theme?: string;
-  },
+  };
   fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 
@@ -51,8 +51,8 @@ export function createApi(
   console.log(`[server]: Registering ${Object.keys(endpoints).length} endpoints...`);
 
   const registeredOpId = new Set<string>();
-  for (const [ methodPath, operatorObject ] of Object.entries(endpoints)) {
-    const [ method = "", ...pathParts ] = methodPath.split(":");
+  for (const [methodPath, operatorObject] of Object.entries(endpoints)) {
+    const [method = "", ...pathParts] = methodPath.split(":");
     const path = pathParts.join(":");
 
     if (registeredOpId.has(operatorObject.operationId)) {
@@ -72,7 +72,7 @@ export function createApi(
 
       Object.assign(req, {
         query: parsedUrl.query,
-        cookies: parseCookies(req.headers.cookie)
+        cookies: parseCookies(req.headers.cookie),
       });
 
       const extensions = {};
@@ -90,13 +90,19 @@ export function createApi(
 
         // process main handler
         const tmpResult = await operatorObject.handler(validatedReq, extensions);
-        const result = tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
+        const result =
+          tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
         const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
 
         // validate result
-        const responseValidator = operatorObject.responses[usedStatus] || operatorObject.responses["default"];
+        const responseValidator =
+          operatorObject.responses[usedStatus] || operatorObject.responses["default"];
 
-        if (!responseValidator || typeof responseValidator === "boolean" || typeof responseValidator === "string") {
+        if (
+          !responseValidator ||
+          typeof responseValidator === "boolean" ||
+          typeof responseValidator === "string"
+        ) {
           console.error(
             `[error]: There is no corresponding validator defined in schema for status ${usedStatus}/default`
           );
@@ -114,29 +120,32 @@ export function createApi(
         }
 
         // response
-        if (result.payload.body instanceof Readable || result.payload.body instanceof fs.ReadStream) {
+        if (
+          result.payload.body instanceof Readable ||
+          result.payload.body instanceof fs.ReadStream
+        ) {
           res.writeHead(usedStatus, result.payload.headers);
 
           result.payload.body.pipe(res);
         } else {
           if (typeof result.payload.body === "undefined") {
-            res
-              .writeHead(usedStatus, result.payload.headers)
-              .end();
+            res.writeHead(usedStatus, result.payload.headers).end();
           } else if (responseValidator instanceof FormDataBody) {
-            const [ mimeType, body ] = await responseValidator.serializeWithContentType(result.payload.body);
+            const [mimeType, body] = await responseValidator.serializeWithContentType(
+              result.payload.body
+            );
 
             res
               .writeHead(usedStatus, {
                 "content-type": mimeType,
-                ...result.payload.headers
+                ...result.payload.headers,
               })
               .end(body);
           } else {
             res
               .writeHead(usedStatus, {
                 "content-type": responseValidator.mimeType,
-                ...result.payload.headers
+                ...result.payload.headers,
               })
               .end(await responseValidator.serialize(result.payload.body));
           }
@@ -154,7 +163,7 @@ export function createApi(
 
   // fallback
   app.use(async (req: http.IncomingMessage, res: http.ServerResponse) => {
-    await config?.fallbackHandler?.(req, res) ?? Promise.resolve(null);
+    (await config?.fallbackHandler?.(req, res)) ?? Promise.resolve(null);
 
     if (res.headersSent) {
       return;
@@ -168,56 +177,53 @@ export function createApi(
 
 function handleError(err: unknown, res: http.ServerResponse) {
   if (err instanceof ApiError) {
-    res
-      .writeHead(err.status, JSON_HEADER)
-      .end(JSON.stringify({
+    res.writeHead(err.status, JSON_HEADER).end(
+      JSON.stringify({
         statusCode: err.status,
-        message: err.message
-      }));
+        message: err.message,
+      })
+    );
   } else if (err instanceof ValidationError) {
-    res
-      .writeHead(400, JSON_HEADER)
-      .end(JSON.stringify({
+    res.writeHead(400, JSON_HEADER).end(
+      JSON.stringify({
         statusCode: 400,
-        message: Object.entries(JSON.parse(err.message)).map(([ k, v ]) => ({
+        message: Object.entries(JSON.parse(err.message)).map(([k, v]) => ({
           in: k,
-          result: v
-        }))
-      }));
+          result: v,
+        })),
+      })
+    );
   } else if (err instanceof Error) {
     console.error(String(err));
-    res
-      .writeHead(500, JSON_HEADER)
-      .end(JSON.stringify({
+    res.writeHead(500, JSON_HEADER).end(
+      JSON.stringify({
         statusCode: 500,
-        message: err.message
-      }));
+        message: err.message,
+      })
+    );
   } else {
     console.error(String(err));
-    res
-      .writeHead(500, JSON_HEADER)
-      .end(JSON.stringify({
+    res.writeHead(500, JSON_HEADER).end(
+      JSON.stringify({
         statusCode: 500,
-        message: String(err)
-      }));
+        message: String(err),
+      })
+    );
   }
 }
 
 function registerDocumentEndpoints(app: Router, options: CreateApiConfig["docs"]) {
   const specJson = JSON.stringify(options.spec);
-  const docTemplate = fs.readFileSync(path.join(__dirname, `./templates/${options.viewer}.hbs`), "utf-8")
+  const docTemplate = fs
+    .readFileSync(path.join(__dirname, `./templates/${options.viewer}.hbs`), "utf-8")
     .replace("{{title}}", options.spec.info.title)
     .replace("{{specUrl}}", options.specPath)
     .replace("{{theme}}", options.theme ?? "");
 
   app.get(options.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
-    res
-      .writeHead(200, { "content-type": "application/json" })
-      .end(specJson);
+    res.writeHead(200, { "content-type": "application/json" }).end(specJson);
   });
   app.get(options.docsPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
-    res
-      .writeHead(200, { "content-type": "text/html" })
-      .end(docTemplate);
+    res.writeHead(200, { "content-type": "text/html" }).end(docTemplate);
   });
 }

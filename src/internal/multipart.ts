@@ -20,22 +20,22 @@ import { randomBytes } from "crypto";
 
 type Part = {
   headers: Record<string, string>;
-  part: number[]
-}
+  part: number[];
+};
 
 type Input = {
   headers: Record<string, string>;
-  filename?: string
-  name?: string
-  type?: string
-  data: Buffer
-}
+  filename?: string;
+  name?: string;
+  type?: string;
+  data: Buffer;
+};
 
 enum ParsingState {
   INIT,
   READING_HEADERS,
   READING_DATA,
-  READING_PART_SEPARATOR
+  READING_PART_SEPARATOR,
 }
 
 export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
@@ -55,7 +55,9 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
     const newLineDetected: boolean = oneByte === 0x0a && prevByte === 0x0d;
     const newLineChar: boolean = oneByte === 0x0a || oneByte === 0x0d;
 
-    if (!newLineChar) {lastline += String.fromCharCode(oneByte);}
+    if (!newLineChar) {
+      lastline += String.fromCharCode(oneByte);
+    }
     if (ParsingState.INIT === state && newLineDetected) {
       // searching for boundary
       if (`--${boundary}` === lastline) {
@@ -70,11 +72,9 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
         // found empty line. search for the headers we want and set the values
         formattedCurrentHeaders = Object.fromEntries(
           currentPartHeaders.flatMap((h) => {
-            const [ header, content = "" ] = h.split(":");
+            const [header, content = ""] = h.split(":");
 
-            return header?.trim()
-              ? [[ header.trim().toLowerCase(), content?.trim() ]]
-              : [];
+            return header?.trim() ? [[header.trim().toLowerCase(), content?.trim()]] : [];
           })
         );
         state = ParsingState.READING_DATA;
@@ -90,9 +90,7 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
         const j = buffer.length - lastline.length;
         const part = buffer.slice(0, j - 1);
 
-        allParts.push(
-          process({ headers: formattedCurrentHeaders, part })
-        );
+        allParts.push(process({ headers: formattedCurrentHeaders, part }));
         buffer = [];
         currentPartHeaders = [];
         formattedCurrentHeaders = {};
@@ -122,7 +120,9 @@ export function getBoundary(header: string): string | null {
     const formattedItem = String(item).trim();
     if (formattedItem.startsWith("boundary")) {
       const k = formattedItem.split("=");
-      return String(k[1]).trim().replace(/^["']|["']$/g, "");
+      return String(k[1])
+        .trim()
+        .replace(/^["']|["']$/g, "");
     }
   }
   return null;
@@ -143,8 +143,8 @@ function process(part: Part): Input {
     data: Buffer.from(part.part),
     ...(contentDisposition["filename"] && {
       filename: contentDisposition["filename"],
-      type: part.headers["content-type"]?.trim()
-    })
+      type: part.headers["content-type"]?.trim(),
+    }),
   };
 
   return result as Input;
@@ -154,7 +154,7 @@ function parseContentDisposition(contentDisposition: string): Record<string, str
   const result: Record<string, string | null> = {
     type: null,
     name: null,
-    filename: null
+    filename: null,
   };
 
   // Split the header into parts
@@ -167,7 +167,7 @@ function parseContentDisposition(contentDisposition: string): Record<string, str
 
   // Process remaining parts for key-value pairs
   for (const part of parts.slice(1)) {
-    const [ key, value ] = part.split("=").map((item) => item.trim());
+    const [key, value] = part.split("=").map((item) => item.trim());
     if (key && value) {
       // Remove quotes around value if present
       result[key.toLowerCase()] = value.replace(/^"|"$/g, "");
@@ -181,10 +181,13 @@ export function generateBoundary(prefix = "----------------------"): string {
   return `--${prefix}${randomBytes(12).toString("hex")}`;
 }
 
-export async function encode(data: Record<string, (string | File)[]>, boundary = generateBoundary()): Promise<Buffer> {
+export async function encode(
+  data: Record<string, (string | File)[]>,
+  boundary = generateBoundary()
+): Promise<Buffer> {
   const multipartFragments: Buffer[] = [];
 
-  for (const [ key, values ] of Object.entries(data)) {
+  for (const [key, values] of Object.entries(data)) {
     for (const value of values) {
       multipartFragments.push(Buffer.from(`--${boundary}`));
 
@@ -196,7 +199,9 @@ export async function encode(data: Record<string, (string | File)[]>, boundary =
         );
       } else if (value instanceof File) {
         multipartFragments.push(
-          Buffer.from(`Content-Disposition: form-data; name="${key}"; filename="${value.name}"\r\n`),
+          Buffer.from(
+            `Content-Disposition: form-data; name="${key}"; filename="${value.name}"\r\n`
+          ),
           Buffer.from(`Content-Type: ${value.type || "application/octet-stream"}\r\n\r\n`),
           Buffer.from(await value.arrayBuffer()),
           Buffer.from("\r\n")

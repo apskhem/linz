@@ -35,7 +35,9 @@ export function mergeEndpointGroups(
     throw new Error(`Duplicated keys occured: ${dupPaths.join(", ")}`);
   }
 
-  return mapKeys(Object.assign({}, ...groups), (k: string) => cleanPath(k.replace(/:/, `:${prefix}`)));
+  return mapKeys(Object.assign({}, ...groups), (k: string) =>
+    cleanPath(k.replace(/:/, `:${prefix}`))
+  );
 }
 
 /**

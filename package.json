@@ -18,6 +18,7 @@
     "check": "tsc --noEmit",
     "build": "npx tsup",
     "test": "jest",
+    "fmt": "prettier --write './src/**/*.ts'",
     "lint": "npx oxlint src",
     "lint:fix": "npx oxlint src --fix"
   },
