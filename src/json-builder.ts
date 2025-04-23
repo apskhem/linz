@@ -1,7 +1,7 @@
 import { generateSchema } from "@anatine/zod-openapi";
 import httpStatus from "http-status";
 import { OpenAPIV3 } from "openapi-types";
-import { pascal, title, isEmpty, mapValues, objectify, omit, shake, mapEntries } from "radash";
+import { isEmpty, mapEntries, mapValues, pascal, shake, title } from "radash";
 import { z } from "zod";
 
 import { convertPathParams } from "./internal/utils";
@@ -61,18 +61,9 @@ export type BuilderConfig = {
    */
   servers?: OpenAPIV3.Document["servers"];
   /**
-   * A record of tags for grouping related API endpoints.
-   * The key is the tag name, and the value is the OpenAPI TagObject.
-   */
-  tags?: Record<string, OpenAPIV3.TagObject>;
-  /**
    * The defined API paths and their respective operations.
    */
   paths: LinzEndpointGroup;
-  /**
-   * Security definitions specifying authentication and authorization mechanisms.
-   */
-  security?: Security<any>[];
   /**
    * Additional reusable schemas, defined using Zod types,
    * that are not being auto-listed by `paths`.
@@ -91,12 +82,21 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
 
   const schemaComponent: NonNullable<OpenAPIV3.ComponentsObject["schemas"]> = {};
 
+  let collectedApplyingSecuritySet = new Set<Security>();
+  let collectedApplyingTagSet = new Set<OpenAPIV3.TagObject>();
   for (const [ methodPath, operationObject ] of Object.entries(config.paths)) {
     const [ method, ...pathParts ] = methodPath.split(":");
     const { path } = convertPathParams(pathParts.join(":"));
 
     const parameterObject: OpenAPIV3.ParameterObject[] = [];
     const pathObject = transformedPath[path] ?? {};
+
+    for (const sec of operationObject.security ?? []) {
+      collectedApplyingSecuritySet.add(sec.security);
+    }
+    for (const tag of operationObject.tags ?? []) {
+      collectedApplyingTagSet.add(tag);
+    }
 
     // collect parameters
     for (const [ type, schema ] of Object.entries(operationObject.parameters ?? {})) {
@@ -157,7 +157,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
       }),
       ...(operationObject.security?.length && {
         security: operationObject.security.map((sec) => ({
-          [sec.inner.name]: []
+          [sec.security.name]: sec.scopes
         }))
       }),
       ...(operationObject.requestBody && {
@@ -219,15 +219,14 @@ export function buildJson(config: BuilderConfig): OpenAPIV3.Document {
         [VALIDATION_ERROR_COMPONENT_NAME]: generateSchema(VALIDATION_ERROR_SCHEMA),
         ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [ pascal(title(k)), generateSchema(v) ])
       },
-      ...(config.security?.length && {
-        securitySchemes: mapValues(
-          objectify(config.security.map((x) => x.inner), (o) => o.name),
-          (o) => omit(o, [ "handler", "name" ]) as OpenAPIV3.SecuritySchemeObject
+      ...(collectedApplyingSecuritySet.size && {
+        securitySchemes: Object.fromEntries(
+          [...collectedApplyingSecuritySet.values()].map((sec) => [sec.name, sec.schema])
         )
       })
     },
-    ...((config.tags && !isEmpty(config.tags)) && {
-      tags: Object.values(config.tags)
+    ...(collectedApplyingTagSet.size && {
+      tags: [...collectedApplyingTagSet.values()]
     })
   };
 }

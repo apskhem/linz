@@ -1,3 +1,5 @@
+import * as http from "http";
+
 import type { OpenAPIV3 as OpenAPIType } from "openapi-types";
 import { mapValues } from "radash";
 import z from "zod";
@@ -16,7 +18,7 @@ type ZodParameterTypes =
   | z.ZodOptional<ZodParameterTypes>
   | z.ZodNullable<ZodParameterTypes>;
 
-type Extensions = Record<string, any>;
+type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIType.TagObject;
 type EncodingItem = {
   contentType?: string[],
@@ -45,7 +47,7 @@ export type LinzEndpoint = {
     default?: SenderBody;
   };
   deprecated?: boolean;
-  security?: Security<any>[];
+  security?: AppliedSecurity[];
   handler: (
     req: Readonly<HTTPRequest>,
     extensions: Extensions
@@ -101,7 +103,7 @@ export function endpoint<
   requestBody?: TBody;
   responses: TResponse;
   deprecated?: boolean;
-  security?: Security<any>[];
+  security?: AppliedSecurity[];
   handler: (
     req: Readonly<{
       queries: z.infer<TQuery>
@@ -143,20 +145,39 @@ export class HttpResponse<T> {
   }
 }
 
-type SecurityConfig = OpenAPIType.SecuritySchemeObject & {
+interface SecurityConfig {
   name: string;
-  handler: (req: Readonly<HTTPRequest>, extensions: Extensions) => Promise<void>;
-};
+  schema: OpenAPIType.SecuritySchemeObject;
+  handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+}
 
-export class Security<T> {
-  public readonly inner: SecurityConfig;
+export class Security implements SecurityConfig {
+  public readonly name: string;
+  public readonly schema: OpenAPIType.SecuritySchemeObject;
+  public readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
 
   constructor(config: SecurityConfig) {
-    this.inner = config;
+    this.name = config.name;
+    this.schema = config.schema;
+    this.handler = config.handler;
   }
 
-  use(flow: string, scopes: string[]): this {
-    return this;
+  apply(scopes: string[]): AppliedSecurity {
+    return new AppliedSecurity(this, scopes);
+  }
+}
+
+export class AppliedSecurity {
+  public readonly scopes: string[];
+  public readonly security: Security;
+
+  constructor(usedSecurity: Security, scopes: string[]) {
+    this.scopes = scopes;
+    this.security = usedSecurity;
+  }
+
+  async authenticate(req: Readonly<http.IncomingMessage>, extensions: Extensions) {
+    await this.security.handler(req, this.scopes, extensions);
   }
 }
 

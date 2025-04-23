@@ -78,15 +78,15 @@ export function createApi(
       const extensions = {};
 
       try {
-        // validate
-        const validatedReq = formatIncomingRequest(req as any, operatorObject);
-
         // process auth (if has) sequentially
         if (operatorObject.security?.length) {
           for (const secOp of operatorObject.security) {
-            await secOp.inner.handler(validatedReq, extensions);
+            await secOp.authenticate(req, extensions);
           }
         }
+
+        // validate
+        const validatedReq = formatIncomingRequest(req as any, operatorObject);
 
         // process main handler
         const tmpResult = await operatorObject.handler(validatedReq, extensions);
