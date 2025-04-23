@@ -338,6 +338,7 @@ function toJsonSchema(
 ): OpenAPIV3_1.SchemaObject {
   let jsonSchema = zodToJsonSchema(schema, {
     target: "jsonSchema2019-09",
+    $refStrategy: "none"
   }) as OpenAPIV3_1.SchemaObject;
 
   if (contentType === OctetStreamBody.mimeType) {
