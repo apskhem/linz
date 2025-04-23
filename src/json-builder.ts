@@ -341,12 +341,6 @@ function toJsonSchema(
     $refStrategy: "none"
   }) as OpenAPIV3_1.SchemaObject;
 
-  if (contentType === OctetStreamBody.mimeType) {
-    Object.assign(jsonSchema, {
-      type: "string",
-      contentMediaType: "application/octet-stream",
-    })
-  }
   if (contentType === FormDataBody.mimeType) {
     for (const fieldName in jsonSchema.properties ?? {}) {
       if (jsonSchema.properties && isEmpty(jsonSchema.properties[fieldName])) {
