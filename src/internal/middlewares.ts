@@ -1,5 +1,6 @@
 import * as http from "http";
 
+import { parse as parseContentType } from "fast-content-type-parse";
 import { mapValues } from "radash";
 
 import * as multipart from "./multipart";
@@ -15,9 +16,17 @@ export function bodyParserMiddleware(
   req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
 
   req.on("end", async () => {
-    if (req.method === "GET" || !bufferChunks.length) {
+    let contentType: ReturnType<typeof parseContentType>;
+    try {
+      contentType = parseContentType(req.headers["content-type"] ?? "");
+    } catch (err) {
+      responseError(res, 400, String(err));
+      return;
+    }
+
+    if (!bufferChunks.length) {
       return next();
-    } else if (req.headers["content-type"] === "application/json") {
+    } else if (contentType.type === "application/json") {
       const rawBody = Buffer.concat(bufferChunks);
 
       try {
@@ -31,10 +40,10 @@ export function bodyParserMiddleware(
       }
 
       return next();
-    } else if (req.headers["content-type"]?.startsWith("multipart/form-data")) {
+    } else if (contentType.type === "multipart/form-data") {
       const rawBody = Buffer.concat(bufferChunks);
 
-      const boundary = multipart.getBoundary(req.headers["content-type"]);
+      const boundary = contentType.parameters["boundary"]?.trim().replace(/^["']|["']$/g, "");
 
       if (!boundary) {
         return responseError(res, 400, "Cannot find multipart boundary");
@@ -92,7 +101,7 @@ export function bodyParserMiddleware(
       });
 
       return next();
-    } else if (req.headers["content-type"] === "application/x-www-form-urlencoded") {
+    } else if (contentType.type === "application/x-www-form-urlencoded") {
       const data = Buffer.concat(bufferChunks).toString("utf-8");
       const dataUrl = new URLSearchParams(data);
 
@@ -123,18 +132,15 @@ export function bodyParserMiddleware(
       });
 
       return next();
-    } else if (req.headers["content-type"] === "application/octet-stream") {
+    } else if (contentType.type === "application/octet-stream") {
       Object.assign(req, {
         body: Buffer.concat(bufferChunks),
       });
 
       return next();
     } else {
-      return responseError(
-        res,
-        415,
-        `'${req.headers["content-type"]}' content type is not supported`
-      );
+      const message = `'${contentType.type}' content type is not supported`;
+      return responseError(res, 415, message);
     }
   });
 
@@ -143,7 +149,7 @@ export function bodyParserMiddleware(
   });
 }
 
-export function parseCookies(cookieHeader = "") {
+export function parseCookies(cookieHeader: string): Record<string, string> {
   return cookieHeader.split(";").reduce(
     (cookies, cookie) => {
       const [name, ...rest] = cookie.trim().split("=");

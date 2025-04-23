@@ -111,23 +111,6 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
   return allParts;
 }
 
-//  read the boundary from the content-type header sent by the http client
-//  this value may be similar to:
-//  'multipart/form-data; boundary=----WebKitFormBoundaryvm5A9tzU1ONaGP5B',
-export function getBoundary(header: string): string | null {
-  const items = header.split(";");
-  for (const item of items) {
-    const formattedItem = String(item).trim();
-    if (formattedItem.startsWith("boundary")) {
-      const k = formattedItem.split("=");
-      return String(k[1])
-        .trim()
-        .replace(/^["']|["']$/g, "");
-    }
-  }
-  return null;
-}
-
 function process(part: Part): Input {
   // will transform this object:
   // { header: 'Content-Disposition: form-data; name="uploads[]"; filename="A.txt"',

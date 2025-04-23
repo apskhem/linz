@@ -137,10 +137,6 @@ declare class ApiError extends Error {
     readonly msg: string;
     constructor(status: number, msg: string);
 }
-declare class ValidationError extends Error {
-    readonly msg: Record<string, any>;
-    constructor(msg: Record<string, any>);
-}
 declare abstract class SenderBody<B extends z.ZodType = any> {
     private _description;
     private _headers;
@@ -218,4 +214,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, AppliedSecurity, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, ValidationError, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

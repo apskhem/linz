@@ -67,7 +67,7 @@ export function createApi(
 
       Object.assign(req, {
         query: parsedUrl.query,
-        cookies: parseCookies(req.headers.cookie),
+        cookies: parseCookies(req.headers.cookie ?? ""),
       });
 
       const extensions = {};
@@ -198,7 +198,7 @@ export function createApi(
 
   // fallback
   app.use(async (req: http.IncomingMessage, res: http.ServerResponse) => {
-    (await config?.fallbackHandler?.(req, res)) ?? Promise.resolve(null);
+    await config?.fallbackHandler?.(req, res);
 
     if (res.headersSent) {
       return;

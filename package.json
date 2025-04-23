@@ -25,6 +25,7 @@
   "dependencies": {
     "@routejs/router": "^3.0.3",
     "cors": "^2.8.5",
+    "fast-content-type-parse": "^3.0.0",
     "http-status": "~1.7.4",
     "radash": "^12.1.0",
     "zod": "^3.24.2",
