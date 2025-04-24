@@ -8,19 +8,15 @@ import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
 import type { OpenAPIV3_1 } from "openapi-types";
 
-import { bodyParserMiddleware, parseCookies } from "./internal/middlewares";
+import { collectBody, MiddlewareError, parseBody, parseCookies } from "./internal/middlewares";
 import { formatIncomingRequest, responseError } from "./internal/utils";
 
-import {
-  ApiError,
-  FormDataBody,
-  type HttpMethod,
-  HttpResponse,
-  type LinzEndpointGroup,
-  METHODS,
-} from "./";
+import { ApiError, type HttpMethod, HttpResponse, type LinzEndpointGroup, METHODS } from "./";
 
 type CreateApiConfig = {
+  /**
+   * CORS configurations, `true` means permissive CORS.
+   */
   cors: boolean | CorsOptions;
   docs: {
     viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
@@ -40,8 +36,6 @@ export function createApi(
   if (config?.cors) {
     app.use(cors(typeof config.cors === "boolean" ? {} : config.cors));
   }
-
-  app.use(bodyParserMiddleware);
 
   console.log(`[server]: Registering ${Object.keys(endpoints).length} endpoints...`);
 
@@ -63,16 +57,12 @@ export function createApi(
     console.log(`[register]: ${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
     app[method as HttpMethod](path, async (req: http.IncomingMessage, res: http.ServerResponse) => {
-      const parsedUrl = url.parse(req.url || "", true);
-
-      Object.assign(req, {
-        query: parsedUrl.query,
-        cookies: parseCookies(req.headers.cookie ?? ""),
-      });
-
-      const extensions = {};
-
       try {
+        const bodyBuffer = await collectBody(req);
+        const body = parseBody(bodyBuffer, req.headers["content-type"] ?? "");
+
+        const extensions = {};
+
         // process auth (if has) sequentially
         if (operatorObject.security?.length) {
           for (const secOp of operatorObject.security) {
@@ -81,7 +71,17 @@ export function createApi(
         }
 
         // validate
-        const validatedReq = formatIncomingRequest(req as any, res, operatorObject)!;
+        const validatedReq = formatIncomingRequest(
+          {
+            body: body,
+            query: url.parse(req.url || "", true).query,
+            cookies: parseCookies(req.headers.cookie ?? ""),
+            params: (req as any).params,
+            headers: req.headers,
+          },
+          res,
+          operatorObject
+        )!;
 
         // process main handler
         const tmpResult = await operatorObject.handler(validatedReq, {
@@ -129,28 +129,18 @@ export function createApi(
           res.writeHead(usedStatus, result.payload.headers);
 
           result.payload.body.pipe(res);
+        } else if (typeof result.payload.body === "undefined") {
+          res.writeHead(usedStatus, result.payload.headers).end();
         } else {
-          if (typeof result.payload.body === "undefined") {
-            res.writeHead(usedStatus, result.payload.headers).end();
-          } else if (responseValidator instanceof FormDataBody) {
-            const [mimeType, body] = await responseValidator.serializeWithContentType(
-              result.payload.body
-            );
+          const out = await responseValidator.serialize(result.payload.body);
 
-            res
-              .writeHead(usedStatus, {
-                "content-type": mimeType,
-                ...result.payload.headers,
-              })
-              .end(body);
-          } else {
-            res
-              .writeHead(usedStatus, {
-                "content-type": responseValidator.mimeType,
-                ...result.payload.headers,
-              })
-              .end(await responseValidator.serialize(result.payload.body));
-          }
+          res
+            .writeHead(usedStatus, {
+              "content-type": responseValidator.mimeType,
+              ...out.headers,
+              ...result.payload.headers,
+            })
+            .end(out.buffer);
         }
       } catch (err) {
         let statusCode: number;
@@ -158,6 +148,9 @@ export function createApi(
 
         if (err instanceof ApiError) {
           statusCode = err.status;
+          message = err.message;
+        } else if (err instanceof MiddlewareError) {
+          statusCode = err.statusCode;
           message = err.message;
         } else if (err instanceof Error) {
           statusCode = 500;

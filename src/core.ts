@@ -17,6 +17,9 @@ type ZodParameterTypes =
   | z.ZodEnum<[string, ...string[]]>
   | z.ZodOptional<ZodParameterTypes>
   | z.ZodNullable<ZodParameterTypes>;
+type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> =
+  | z.ZodArray<T>
+  | z.ZodTuple<[T, ...T[]]>;
 
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIType.TagObject;
@@ -34,7 +37,7 @@ export type LinzEndpoint = {
   description?: string;
   operationId: string;
   parameters?: {
-    query?: z.ZodObject<Record<string, z.ZodArray<ZodParameterTypes>>>;
+    query?: z.ZodObject<Record<string, ZodMultiMapValues>>;
     header?: z.ZodObject<Record<string, ZodParameterTypes>>;
     path?: z.ZodObject<Record<string, ZodParameterTypes>>;
     cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -219,6 +222,11 @@ export class ApiError extends Error {
   }
 }
 
+type SerializeResult = {
+  buffer: Buffer;
+  headers: http.IncomingHttpHeaders;
+};
+
 abstract class SenderBody<B extends z.ZodType = any> {
   /** for both `RequestBodyObject` and `ResponseObject` */
   private _description: string | null = null;
@@ -230,7 +238,7 @@ abstract class SenderBody<B extends z.ZodType = any> {
   abstract readonly body: B;
   abstract mimeType: string;
 
-  abstract serialize<T extends z.infer<B>>(data: T): Promise<Buffer>;
+  abstract serialize<T extends z.infer<B>>(data: T): Promise<SerializeResult>;
 
   describe(description: SenderBody["_description"]): this {
     this._description = description;
@@ -267,8 +275,11 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return Buffer.from(JSON.stringify(data));
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult> {
+    return {
+      buffer: Buffer.from(JSON.stringify(data)),
+      headers: {},
+    };
   }
 
   override get mimeType(): string {
@@ -279,7 +290,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
 type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
 
 export class FormDataBody<
-  B extends z.ZodObject<Record<string, z.ZodArray<FormDataValidator>>> = any,
+  B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any,
   K extends keyof z.infer<B> = any,
 > extends SenderBody<B> {
   static readonly mimeType: string = "multipart/form-data";
@@ -291,20 +302,18 @@ export class FormDataBody<
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return (await this.serializeWithContentType(data))[1];
-  }
-
-  async serializeWithContentType<T extends z.TypeOf<B>>(data: T): Promise<[string, Buffer]> {
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult> {
     const boundary = generateBoundary();
 
-    return [
-      `${FormDataBody.mimeType}; boundary=${boundary}`,
-      await encode(
+    return {
+      buffer: await encode(
         mapValues(data, (vx) => [vx instanceof File ? vx : String(vx)]),
         boundary
       ),
-    ];
+      headers: {
+        "content-type": `${FormDataBody.mimeType}; boundary=${boundary}`,
+      },
+    };
   }
 
   override get mimeType(): string {
@@ -313,10 +322,7 @@ export class FormDataBody<
 }
 
 export class UrlEncodedBody<
-  B extends z.ZodObject<
-    Record<string, ZodParameterTypes>
-    // FIXME: should also accept `URLSearchParams`?
-  > = any,
+  B extends z.ZodObject<Record<string, ZodMultiMapValues>> = any,
   K extends keyof z.infer<B> = any,
 > extends SenderBody<B> {
   static readonly mimeType: string = "application/x-www-form-urlencoded";
@@ -328,14 +334,19 @@ export class UrlEncodedBody<
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<Buffer> {
-    return Buffer.from(
-      new URLSearchParams(
-        data instanceof URLSearchParams
-          ? data
-          : Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
-      ).toString()
-    );
+  override async serialize<T extends z.TypeOf<B> | URLSearchParams>(
+    data: T
+  ): Promise<SerializeResult> {
+    return {
+      buffer: Buffer.from(
+        new URLSearchParams(
+          data instanceof URLSearchParams
+            ? data
+            : Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+        ).toString()
+      ),
+      headers: {},
+    };
   }
 
   override get mimeType(): string {
@@ -352,8 +363,11 @@ export class OctetStreamBody<
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return data;
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult> {
+    return {
+      buffer: data,
+      headers: {},
+    };
   }
 
   override get mimeType(): string {
@@ -368,8 +382,11 @@ export class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer> {
-    return Buffer.from(data);
+  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult> {
+    return {
+      buffer: Buffer.from(data),
+      headers: {},
+    };
   }
 
   override get mimeType(): string {

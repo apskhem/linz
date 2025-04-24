@@ -20,6 +20,7 @@ type CreateApiConfig = {
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
+type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]>;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3_1.TagObject;
 type EncodingItem = {
@@ -35,7 +36,7 @@ type LinzEndpoint = {
     description?: string;
     operationId: string;
     parameters?: {
-        query?: z.ZodObject<Record<string, z.ZodArray<ZodParameterTypes>>>;
+        query?: z.ZodObject<Record<string, ZodMultiMapValues>>;
         header?: z.ZodObject<Record<string, ZodParameterTypes>>;
         path?: z.ZodObject<Record<string, ZodParameterTypes>>;
         cookie?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -137,13 +138,17 @@ declare class ApiError extends Error {
     readonly msg: string;
     constructor(status: number, msg: string);
 }
+type SerializeResult = {
+    buffer: Buffer;
+    headers: http.IncomingHttpHeaders;
+};
 declare abstract class SenderBody<B extends z.ZodType = any> {
     private _description;
     private _headers;
     private _examples;
     abstract readonly body: B;
     abstract mimeType: string;
-    abstract serialize<T extends z.infer<B>>(data: T): Promise<Buffer>;
+    abstract serialize<T extends z.infer<B>>(data: T): Promise<SerializeResult>;
     describe(description: SenderBody["_description"]): this;
     get description(): SenderBody["_description"];
     requireHeaders(headers: SenderBody["_headers"]): this;
@@ -155,39 +160,38 @@ declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sende
     readonly body: B;
     static readonly mimeType: string;
     constructor(body: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
 type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
-declare class FormDataBody<B extends z.ZodObject<Record<string, z.ZodArray<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class FormDataBody<B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType: string;
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
-    serializeWithContentType<T extends z.TypeOf<B>>(data: T): Promise<[string, Buffer]>;
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
-declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodParameterTypes>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodMultiMapValues>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
     static readonly mimeType: string;
     constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
-    serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<Buffer>;
+    serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
 declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType: string;
     constructor(body?: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
 declare class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType: string;
     constructor(body?: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<Buffer>;
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
 declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {

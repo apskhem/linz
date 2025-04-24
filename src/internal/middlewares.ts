@@ -3,108 +3,90 @@ import * as http from "http";
 import { parse as parseContentType } from "fast-content-type-parse";
 
 import * as multipart from "./multipart";
-import { responseError } from "./utils";
 
-export function bodyParserMiddleware(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  next: () => any
-): void {
-  const bufferChunks: Buffer[] = [];
+export class MiddlewareError extends Error {
+  statusCode: number;
 
-  req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
+  constructor(statusCode: number, message: string) {
+    super(message);
 
-  req.on("end", async () => {
-    let contentType: ReturnType<typeof parseContentType>;
+    this.statusCode = statusCode;
+  }
+}
+
+export function collectBody(req: http.IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const bufferChunks: Buffer[] = [];
+
+    req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(bufferChunks)));
+    req.on("error", (err) => reject(err));
+  });
+}
+
+export function parseBody(body: Buffer, contentTypeHeader: string): any | null {
+  let contentType: ReturnType<typeof parseContentType>;
+  try {
+    contentType = parseContentType(contentTypeHeader ?? "");
+  } catch (err) {
+    throw new MiddlewareError(400, String(err));
+  }
+
+  if (!body.length) {
+    return null;
+  } else if (contentType.type === "application/json") {
     try {
-      contentType = parseContentType(req.headers["content-type"] ?? "");
+      JSON.parse(body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8"));
     } catch (err) {
-      responseError(res, 400, String(err));
-      return;
+      throw new MiddlewareError(400, "Invalid JSON");
+    }
+  } else if (contentType.type === "multipart/form-data") {
+    const boundary = contentType.parameters["boundary"]?.trim().replace(/^["']|["']$/g, "");
+
+    if (!boundary) {
+      throw new MiddlewareError(400, "Cannot find multipart boundary");
     }
 
-    if (!bufferChunks.length) {
-      return next();
-    } else if (contentType.type === "application/json") {
-      const rawBody = Buffer.concat(bufferChunks);
+    const parts = multipart.parse(body, boundary);
 
-      try {
-        if (rawBody.length) {
-          Object.assign(req, {
-            body: JSON.parse(rawBody.toString("utf-8")),
-          });
-        }
-      } catch (err) {
-        return responseError(res, 400, "Invalid JSON");
+    const mergedItems: Record<string, (string | File)[]> = {};
+    for (const part of parts) {
+      if (!part.name) {
+        continue;
       }
 
-      return next();
-    } else if (contentType.type === "multipart/form-data") {
-      const rawBody = Buffer.concat(bufferChunks);
+      const data = part.filename
+        ? new File(
+            [part.data],
+            part.filename,
+            part.type
+              ? {
+                  type: part.type,
+                }
+              : {}
+          )
+        : part.data.toString("utf-8");
 
-      const boundary = contentType.parameters["boundary"]?.trim().replace(/^["']|["']$/g, "");
-
-      if (!boundary) {
-        return responseError(res, 400, "Cannot find multipart boundary");
-      }
-
-      const parts = multipart.parse(rawBody, boundary);
-
-      const mergedItems: Record<string, (string | File)[]> = {};
-      for (const part of parts) {
-        if (!part.name) {
-          continue;
-        }
-
-        const data = part.filename
-          ? new File(
-              [part.data],
-              part.filename,
-              part.type
-                ? {
-                    type: part.type,
-                  }
-                : {}
-            )
-          : part.data.toString("utf-8");
-
-        (mergedItems[part.name] ??= []).push(data);
-      }
-
-      Object.assign(req, {
-        body: mergedItems,
-      });
-
-      return next();
-    } else if (contentType.type === "application/x-www-form-urlencoded") {
-      const data = Buffer.concat(bufferChunks).toString("utf-8");
-      const dataUrl = new URLSearchParams(data);
-
-      const mergedItems: Record<string, string[]> = {};
-      for (const [key, value] of dataUrl.entries()) {
-        (mergedItems[key] ??= []).push(value);
-      }
-
-      Object.assign(req, {
-        body: mergedItems,
-      });
-
-      return next();
-    } else if (contentType.type === "application/octet-stream") {
-      Object.assign(req, {
-        body: Buffer.concat(bufferChunks),
-      });
-
-      return next();
-    } else {
-      const message = `'${contentType.type}' content type is not supported`;
-      return responseError(res, 415, message);
+      (mergedItems[part.name] ??= []).push(data);
     }
-  });
 
-  req.on("error", (err) => {
-    responseError(res, 500, String(err));
-  });
+    return mergedItems;
+  } else if (contentType.type === "application/x-www-form-urlencoded") {
+    const data = body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8");
+    const dataUrl = new URLSearchParams(data);
+
+    const mergedItems: Record<string, string[]> = {};
+    for (const [key, value] of dataUrl.entries()) {
+      (mergedItems[key] ??= []).push(value);
+    }
+
+    return mergedItems;
+  } else if (contentType.type === "application/octet-stream") {
+    return body;
+  } else {
+    const message = `'${contentType.type}' content type is not supported`;
+    throw new MiddlewareError(415, message);
+  }
 }
 
 export function parseCookies(cookieHeader: string): Record<string, string> {

@@ -2,49 +2,50 @@ import * as http from "http";
 
 import { type HTTPRequest, type LinzEndpoint } from "../core";
 
-type AdditionalRequestObjects = {
+type Message = {
   body: any;
   query: any;
   params: any;
   cookies: any;
+  headers: any;
 };
 
 export function formatIncomingRequest(
-  req: http.IncomingMessage & AdditionalRequestObjects,
+  message: Message,
   res: http.ServerResponse,
   validator: LinzEndpoint
 ): Readonly<HTTPRequest> | null {
   const errors = [] as any[];
 
-  const resultBody = validator.requestBody?.body.safeParse(req.body);
+  const resultBody = validator.requestBody?.body.safeParse(message.body);
   if (resultBody.error) {
     errors.push({
       in: "body",
       result: resultBody.error.errors,
     });
   }
-  const resultQuery = validator.parameters?.query?.safeParse(req.query);
+  const resultQuery = validator.parameters?.query?.safeParse(message.query);
   if (resultQuery?.error) {
     errors.push({
       in: "queries",
       result: resultQuery.error.errors,
     });
   }
-  const resultPath = validator.parameters?.path?.safeParse(req.params);
+  const resultPath = validator.parameters?.path?.safeParse(message.params);
   if (resultPath?.error) {
     errors.push({
       in: "params",
       result: resultPath.error.errors,
     });
   }
-  const resultHeader = validator.parameters?.header?.safeParse(req.headers);
+  const resultHeader = validator.parameters?.header?.safeParse(message.headers);
   if (resultHeader?.error) {
     errors.push({
       in: "headers",
       result: resultHeader.error.errors,
     });
   }
-  const resultCookie = validator.parameters?.cookie?.safeParse(req.cookies);
+  const resultCookie = validator.parameters?.cookie?.safeParse(message.cookies);
   if (resultCookie?.error) {
     errors.push({
       in: "cookies",
