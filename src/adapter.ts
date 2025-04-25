@@ -16,7 +16,7 @@ import {
   parseCookies,
   type RequestBodyConfig,
 } from "./internal/middlewares";
-import { formatIncomingRequest, responseError } from "./internal/utils";
+import { formatIncomingRequest, responseError, ValidationError } from "./internal/utils";
 
 import { ApiError, type HttpMethod, HttpResponse, type LinzEndpointGroup, METHODS } from "./";
 
@@ -104,17 +104,16 @@ export function createApi(
         // validate
         const validatedReq = formatIncomingRequest(
           {
-            body: body,
-            query: mapValues(url.parse(req.url || "", true).query, (v) =>
+            body,
+            queries: mapValues(url.parse(req.url || "", true).query, (v) =>
               config?.request?.multiValueQueryString ? v?.at(-1) : v
             ),
             cookies: parseCookies(req.headers.cookie ?? ""),
             params: (req as any).params,
             headers: req.headers,
           },
-          res,
           operatorObject
-        )!;
+        );
 
         // process main handler
         const tmpResult = await operatorObject.handler(validatedReq, {
@@ -128,6 +127,10 @@ export function createApi(
         const result =
           tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
         const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
+
+        if (res.headersSent) {
+          return;
+        }
 
         // validate result
         const responseValidator =
@@ -177,7 +180,7 @@ export function createApi(
         }
       } catch (err) {
         let statusCode: number;
-        let message: string;
+        let message: any;
 
         if (err instanceof ApiError) {
           statusCode = err.status;
@@ -185,6 +188,9 @@ export function createApi(
         } else if (err instanceof BodyParserError) {
           statusCode = err.statusCode;
           message = err.message;
+        } else if (err instanceof ValidationError) {
+          statusCode = 400;
+          message = err.errors;
         } else if (err instanceof Error) {
           statusCode = 500;
           message = err.message;

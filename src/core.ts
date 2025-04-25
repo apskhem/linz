@@ -53,7 +53,7 @@ export type LinzEndpoint = {
   deprecated?: boolean;
   security?: AppliedSecurity[];
   handler: (
-    message: Readonly<HTTPRequest>,
+    message: Readonly<HTTPMessage>,
     ctx: {
       security?: AppliedSecurity[];
       extensions: Extensions;
@@ -85,13 +85,12 @@ export type LinzEndpointGroup = {
   [methodPath: `${(typeof METHODS)[number]}:${string}`]: LinzEndpoint;
 };
 
-export type HTTPRequest = {
+export type HTTPMessage = {
   /**
-   * A parsed payload from a HTTP payload body,
-   * `null` indicates that the body is empty or `Content-Length: 0`.
+   * A parsed and transformed payload from an HTTP payload body passing the defined validator.
    */
-  body: any | null;
-  queries: Record<string, string[]>;
+  body: any;
+  queries: Record<string, string[] | string>;
   params: Record<string, string>;
   headers: Record<string, string>;
   cookies: Record<string, string>;

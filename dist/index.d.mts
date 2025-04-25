@@ -55,7 +55,7 @@ type LinzEndpoint = {
     };
     deprecated?: boolean;
     security?: AppliedSecurity[];
-    handler: (message: Readonly<HTTPRequest>, ctx: {
+    handler: (message: Readonly<HTTPMessage>, ctx: {
         security?: AppliedSecurity[];
         extensions: Extensions;
         req: http.IncomingMessage;
@@ -74,9 +74,9 @@ type HttpMethod = (typeof METHODS)[number];
 type LinzEndpointGroup = {
     [methodPath: `${(typeof METHODS)[number]}:${string}`]: LinzEndpoint;
 };
-type HTTPRequest = {
-    body: any | null;
-    queries: Record<string, string[]>;
+type HTTPMessage = {
+    body: any;
+    queries: Record<string, string[] | string>;
     params: Record<string, string>;
     headers: Record<string, string>;
     cookies: Record<string, string>;
@@ -225,4 +225,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

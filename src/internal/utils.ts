@@ -1,70 +1,75 @@
 import * as http from "http";
 
-import { type HTTPRequest, type LinzEndpoint } from "../core";
+import { type HTTPMessage, type LinzEndpoint } from "../core";
 
-type Message = {
-  body: any;
-  query: any;
-  params: any;
-  cookies: any;
-  headers: any;
-};
+export class ValidationError extends Error {
+  errors: { in: keyof HTTPMessage; result: any }[] = [];
+
+  constructor() {
+    super();
+  }
+
+  addIssue(issue: ValidationError["errors"][number]) {
+    this.errors.push(issue);
+  }
+
+  hasIssue(): boolean {
+    return this.errors.length > 0;
+  }
+}
 
 export function formatIncomingRequest(
-  message: Message,
-  res: http.ServerResponse,
+  message: Record<keyof HTTPMessage, any>,
   validator: LinzEndpoint
-): Readonly<HTTPRequest> | null {
-  const errors = [] as any[];
+): Readonly<HTTPMessage> {
+  const errors = new ValidationError();
 
   const resultBody = validator.requestBody?.body.safeParse(message.body);
-  if (resultBody.error) {
-    errors.push({
+  if (resultBody?.error) {
+    errors.addIssue({
       in: "body",
       result: resultBody.error.errors,
     });
   }
-  const resultQuery = validator.parameters?.query?.safeParse(message.query);
+  const resultQuery = validator.parameters?.query?.safeParse(message.queries);
   if (resultQuery?.error) {
-    errors.push({
+    errors.addIssue({
       in: "queries",
       result: resultQuery.error.errors,
     });
   }
   const resultPath = validator.parameters?.path?.safeParse(message.params);
   if (resultPath?.error) {
-    errors.push({
+    errors.addIssue({
       in: "params",
       result: resultPath.error.errors,
     });
   }
   const resultHeader = validator.parameters?.header?.safeParse(message.headers);
   if (resultHeader?.error) {
-    errors.push({
+    errors.addIssue({
       in: "headers",
       result: resultHeader.error.errors,
     });
   }
   const resultCookie = validator.parameters?.cookie?.safeParse(message.cookies);
   if (resultCookie?.error) {
-    errors.push({
+    errors.addIssue({
       in: "cookies",
       result: resultCookie.error.errors,
     });
   }
 
-  if (errors.length) {
-    res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify(errors));
-
-    return null;
+  if (errors.hasIssue()) {
+    throw errors;
   }
 
   return {
-    body: resultBody?.data ?? null,
-    queries: (resultQuery?.data as HTTPRequest["queries"]) ?? {},
-    params: (resultPath?.data as HTTPRequest["params"]) ?? {},
-    headers: (resultHeader?.data as HTTPRequest["headers"]) ?? {},
-    cookies: (resultCookie?.data as HTTPRequest["cookies"]) ?? {},
+    body: resultBody?.data,
+    queries: (resultQuery?.data as HTTPMessage["queries"]) ?? {},
+    params: (resultPath?.data as HTTPMessage["params"]) ?? {},
+    headers: (resultHeader?.data as HTTPMessage["headers"]) ?? {},
+    cookies: (resultCookie?.data as HTTPMessage["cookies"]) ?? {},
   };
 }
 
