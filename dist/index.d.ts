@@ -6,6 +6,12 @@ import * as http from 'http';
 import { CorsOptions } from 'cors';
 import z, { z as z$1 } from 'zod';
 
+type RequestBodyConfig = {
+    multiValueQueryString?: boolean;
+    multiValueFormData?: boolean;
+    multiValueUrlEncoded?: boolean;
+};
+
 type CreateApiConfig = {
     cors: boolean | CorsOptions;
     docs: {
@@ -15,12 +21,13 @@ type CreateApiConfig = {
         specPath: string;
         theme?: string;
     };
+    request: RequestBodyConfig;
     fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
-type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]>;
+type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]> | T;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3_1.TagObject;
 type EncodingItem = {
@@ -218,4 +225,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, AppliedSecurity, type BuilderConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPRequest, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

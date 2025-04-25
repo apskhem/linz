@@ -4,7 +4,34 @@ import { parse as parseContentType } from "fast-content-type-parse";
 
 import * as multipart from "./multipart";
 
-export class MiddlewareError extends Error {
+/**
+ * Configurations for incoming requests.
+ */
+export type RequestBodyConfig = {
+  /**
+   * Enables parsing multiple values for a query string.
+   * If `false`, only the last value is used.
+   *
+   * @default false
+   */
+  multiValueQueryString?: boolean;
+  /**
+   * Enables parsing multiple values for `multipart/form-data`.
+   * If `false`, only the last value is used.
+   *
+   * @default false
+   */
+  multiValueFormData?: boolean;
+  /**
+   * Enables parsing multiple values for `application/x-www-form-urlencoded`.
+   * If `false`, only the last value is used.
+   *
+   * @default false
+   */
+  multiValueUrlEncoded?: boolean;
+};
+
+export class BodyParserError extends Error {
   statusCode: number;
 
   constructor(statusCode: number, message: string) {
@@ -24,12 +51,16 @@ export function collectBody(req: http.IncomingMessage): Promise<Buffer> {
   });
 }
 
-export function parseBody(body: Buffer, contentTypeHeader: string): any | null {
+export function parseBody(
+  body: Buffer,
+  contentTypeHeader: string,
+  config?: RequestBodyConfig
+): any | null {
   let contentType: ReturnType<typeof parseContentType>;
   try {
     contentType = parseContentType(contentTypeHeader ?? "");
   } catch (err) {
-    throw new MiddlewareError(400, String(err));
+    throw new BodyParserError(400, String(err));
   }
 
   if (!body.length) {
@@ -38,54 +69,55 @@ export function parseBody(body: Buffer, contentTypeHeader: string): any | null {
     try {
       JSON.parse(body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8"));
     } catch (err) {
-      throw new MiddlewareError(400, "Invalid JSON");
+      throw new BodyParserError(400, String(err));
     }
   } else if (contentType.type === "multipart/form-data") {
     const boundary = contentType.parameters["boundary"]?.trim().replace(/^["']|["']$/g, "");
 
     if (!boundary) {
-      throw new MiddlewareError(400, "Cannot find multipart boundary");
+      throw new BodyParserError(400, "Cannot find multipart boundary");
     }
 
     const parts = multipart.parse(body, boundary);
 
-    const mergedItems: Record<string, (string | File)[]> = {};
+    const resultMultiMap: Record<string, (string | File)[]> = {};
+    const resultDict: Record<string, string | File> = {};
     for (const part of parts) {
+      const rawContentType = part.headers["content-type"];
+      const contentType = rawContentType ? parseContentType(rawContentType) : null;
+
       if (!part.name) {
         continue;
       }
 
       const data = part.filename
-        ? new File(
-            [part.data],
-            part.filename,
-            part.type
-              ? {
-                  type: part.type,
-                }
-              : {}
-          )
-        : part.data.toString("utf-8");
+        ? new File([part.data], part.filename, part.type ? { type: part.type } : {})
+        : part.data.toString((contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8");
 
-      (mergedItems[part.name] ??= []).push(data);
+      config?.multiValueFormData
+        ? (resultMultiMap[part.name] ??= []).push(data)
+        : (resultDict[part.name] = data);
     }
 
-    return mergedItems;
+    return config?.multiValueFormData ? resultMultiMap : resultDict;
   } else if (contentType.type === "application/x-www-form-urlencoded") {
     const data = body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8");
     const dataUrl = new URLSearchParams(data);
 
-    const mergedItems: Record<string, string[]> = {};
+    const resultMultiMap: Record<string, string[]> = {};
+    const resultDict: Record<string, string> = {};
     for (const [key, value] of dataUrl.entries()) {
-      (mergedItems[key] ??= []).push(value);
+      config?.multiValueUrlEncoded
+        ? (resultMultiMap[key] ??= []).push(value)
+        : (resultDict[key] = value);
     }
 
-    return mergedItems;
+    return config?.multiValueUrlEncoded ? resultMultiMap : resultDict;
   } else if (contentType.type === "application/octet-stream") {
     return body;
   } else {
     const message = `'${contentType.type}' content type is not supported`;
-    throw new MiddlewareError(415, message);
+    throw new BodyParserError(415, message);
   }
 }
 

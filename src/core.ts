@@ -19,7 +19,8 @@ type ZodParameterTypes =
   | z.ZodNullable<ZodParameterTypes>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> =
   | z.ZodArray<T>
-  | z.ZodTuple<[T, ...T[]]>;
+  | z.ZodTuple<[T, ...T[]]>
+  | T;
 
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIType.TagObject;

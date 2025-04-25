@@ -7,24 +7,55 @@ import * as url from "url";
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
 import type { OpenAPIV3_1 } from "openapi-types";
+import { mapValues } from "radash";
 
-import { collectBody, MiddlewareError, parseBody, parseCookies } from "./internal/middlewares";
+import {
+  collectBody,
+  BodyParserError,
+  parseBody,
+  parseCookies,
+  type RequestBodyConfig,
+} from "./internal/middlewares";
 import { formatIncomingRequest, responseError } from "./internal/utils";
 
 import { ApiError, type HttpMethod, HttpResponse, type LinzEndpointGroup, METHODS } from "./";
 
-type CreateApiConfig = {
+export type CreateApiConfig = {
   /**
    * CORS configurations, `true` means permissive CORS.
    */
   cors: boolean | CorsOptions;
+  /**
+   * Configurations related to OpenAPI documents.
+   */
   docs: {
+    /**
+     * The documents viewer.
+     */
     viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
+    /**
+     * The OpenAPI spec.
+     */
     spec: OpenAPIV3_1.Document;
+    /**
+     * The path for users to view the docs.
+     * The docs will render to the set `viewer`.
+     */
     docsPath: string;
+    /**
+     * The path get the OpenAPI spec file in JSON.
+     */
     specPath: string;
+    /**
+     * The theme configurations for the docs viewer.
+     */
     theme?: string;
   };
+  /**
+   * Incoming requests configurations.
+   * Applies to all endpoints.
+   */
+  request: RequestBodyConfig;
   fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 
@@ -74,7 +105,9 @@ export function createApi(
         const validatedReq = formatIncomingRequest(
           {
             body: body,
-            query: url.parse(req.url || "", true).query,
+            query: mapValues(url.parse(req.url || "", true).query, (v) =>
+              config?.request?.multiValueQueryString ? v?.at(-1) : v
+            ),
             cookies: parseCookies(req.headers.cookie ?? ""),
             params: (req as any).params,
             headers: req.headers,
@@ -149,7 +182,7 @@ export function createApi(
         if (err instanceof ApiError) {
           statusCode = err.status;
           message = err.message;
-        } else if (err instanceof MiddlewareError) {
+        } else if (err instanceof BodyParserError) {
           statusCode = err.statusCode;
           message = err.message;
         } else if (err instanceof Error) {
