@@ -22,6 +22,9 @@ const openApiSpec = buildJson({
 
 createApi(app, router, {
   cors: true,
+  request: {
+    multiValueQueryString: true
+  },
   docs: {
     viewer: "scalar",
     spec: openApiSpec,

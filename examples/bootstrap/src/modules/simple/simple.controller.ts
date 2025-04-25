@@ -40,6 +40,23 @@ const endpoints: LinzEndpointGroup = {
       return { body: body.echo ?? "null!" };
     }
   }),
+  "post:/echo/simple/query": endpoint({
+    parameters: {
+      query: z.object({
+        echo: z.tuple([z.string()])
+      })
+    },
+    responses: {
+      201: z.object({
+        body: z.string()
+      }),
+      404: true
+    },
+    operationId: "echoBodyQuery",
+    handler: async ({ queries }) => {
+      return { body: JSON.stringify(queries.echo) ?? "null!" };
+    }
+  }),
   "post:/echo/simple/void": endpoint({
     requestBody: new JsonBody(
       z.object({

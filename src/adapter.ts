@@ -105,9 +105,10 @@ export function createApi(
         const validatedReq = formatIncomingRequest(
           {
             body,
-            queries: mapValues(url.parse(req.url || "", true).query, (v) =>
-              config?.request?.multiValueQueryString ? v?.at(-1) : v
-            ),
+            queries: mapValues(url.parse(req.url || "", true).query, (v) => {
+              const vt = Array.isArray(v) ? v : [v];
+              return config?.request?.multiValueQueryString ? vt : vt.at(-1);
+            }),
             cookies: parseCookies(req.headers.cookie ?? ""),
             params: (req as any).params,
             headers: req.headers,

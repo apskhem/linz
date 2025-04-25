@@ -3,6 +3,7 @@ import * as http from "http";
 import { parse as parseContentType } from "fast-content-type-parse";
 
 import * as multipart from "./multipart";
+import { mapValues } from "radash";
 
 /**
  * Configurations for incoming requests.
@@ -82,8 +83,7 @@ export function parseBody(
 
     const parts = multipart.parse(body, boundary);
 
-    const resultMultiMap: Record<string, (string | File)[]> = {};
-    const resultDict: Record<string, string | File> = {};
+    const mergedItems: Record<string, (string | File)[]> = {};
     for (const part of parts) {
       const rawContentType = part.headers["content-type"];
       const contentType = rawContentType ? parseContentType(rawContentType) : null;
@@ -96,25 +96,20 @@ export function parseBody(
         ? new File([part.data], part.filename, part.type ? { type: part.type } : {})
         : part.data.toString((contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8");
 
-      config?.multiValueFormData
-        ? (resultMultiMap[part.name] ??= []).push(data)
-        : (resultDict[part.name] = data);
+      (mergedItems[part.name] ??= []).push(data);
     }
 
-    return config?.multiValueFormData ? resultMultiMap : resultDict;
+    return config?.multiValueFormData ? mergedItems : mapValues(mergedItems, (v) => v.at(-1));
   } else if (contentType.type === "application/x-www-form-urlencoded") {
     const data = body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8");
     const dataUrl = new URLSearchParams(data);
 
-    const resultMultiMap: Record<string, string[]> = {};
-    const resultDict: Record<string, string> = {};
+    const mergedItems: Record<string, string[]> = {};
     for (const [key, value] of dataUrl.entries()) {
-      config?.multiValueUrlEncoded
-        ? (resultMultiMap[key] ??= []).push(value)
-        : (resultDict[key] = value);
+      (mergedItems[key] ??= []).push(value);
     }
 
-    return config?.multiValueUrlEncoded ? resultMultiMap : resultDict;
+    return config?.multiValueUrlEncoded ? mergedItems : mapValues(mergedItems, (v) => v.at(-1));
   } else if (contentType.type === "application/octet-stream") {
     return body;
   } else {
