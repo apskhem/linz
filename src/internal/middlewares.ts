@@ -68,9 +68,9 @@ export function parseBody(
     return undefined;
   } else if (contentType.type === "application/json") {
     try {
-      return JSON.parse(
-        body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8")
-      );
+      const charset = (contentType.parameters["charset"] as BufferEncoding) ?? "utf-8";
+
+      return JSON.parse(body.toString(charset));
     } catch (err) {
       throw new BodyParserError(400, String(err));
     }
@@ -87,6 +87,7 @@ export function parseBody(
     for (const part of parts) {
       const rawContentType = part.headers["content-type"];
       const contentType = rawContentType ? parseContentType(rawContentType) : null;
+      const charset = (contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8";
 
       if (!part.name) {
         continue;
@@ -94,14 +95,15 @@ export function parseBody(
 
       const data = part.filename
         ? new File([part.data], part.filename, part.type ? { type: part.type } : {})
-        : part.data.toString((contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8");
+        : part.data.toString(charset);
 
       (mergedItems[part.name] ??= []).push(data);
     }
 
     return config?.multiValueFormData ? mergedItems : mapValues(mergedItems, (v) => v.at(-1));
   } else if (contentType.type === "application/x-www-form-urlencoded") {
-    const data = body.toString((contentType.parameters["charset"] as BufferEncoding) ?? "utf-8");
+    const charset = (contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8";
+    const data = body.toString(charset);
     const dataUrl = new URLSearchParams(data);
 
     const mergedItems: Record<string, string[]> = {};
