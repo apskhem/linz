@@ -1,9 +1,9 @@
 import * as http from "http";
 
 import { parse as parseContentType } from "fast-content-type-parse";
+import { mapValues } from "radash";
 
 import * as multipart from "./multipart";
-import { mapValues } from "radash";
 
 /**
  * Configurations for incoming requests.

@@ -10,8 +10,8 @@ import type { OpenAPIV3_1 } from "openapi-types";
 import { mapValues } from "radash";
 
 import {
-  collectBody,
   BodyParserError,
+  collectBody,
   parseBody,
   parseCookies,
   type RequestBodyConfig,
