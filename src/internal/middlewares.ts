@@ -57,6 +57,10 @@ export function parseBody(
   contentTypeHeader: string,
   config?: RequestBodyConfig
 ): any | undefined {
+  if (!body.length) {
+    return undefined;
+  }
+
   let contentType: ReturnType<typeof parseContentType>;
   try {
     contentType = parseContentType(contentTypeHeader ?? "");
@@ -64,9 +68,7 @@ export function parseBody(
     throw new BodyParserError(400, String(err));
   }
 
-  if (!body.length) {
-    return undefined;
-  } else if (contentType.type === "application/json") {
+  if (contentType.type === "application/json") {
     try {
       const charset = (contentType.parameters["charset"] as BufferEncoding) ?? "utf-8";
 
