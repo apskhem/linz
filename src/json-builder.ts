@@ -123,6 +123,10 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
   const schemaComponent: NonNullable<OpenAPIV3_1.ComponentsObject["schemas"]> = {};
 
   for (const [methodPath, operationObject] of Object.entries(config.paths)) {
+    if (operationObject.hidden) {
+      continue;
+    }
+
     const [method, ...pathParts] = methodPath.split(":");
     const { path } = convertPathParams(pathParts.join(":"));
 

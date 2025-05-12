@@ -42,6 +42,7 @@ type LinzEndpoint = {
     summary?: string;
     description?: string;
     operationId: string;
+    hidden?: boolean;
     parameters?: {
         query?: z.ZodObject<Record<string, ZodMultiMapValues>>;
         header?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -86,6 +87,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
     summary?: string;
     description?: string;
     operationId: string;
+    hidden?: boolean;
     parameters?: {
         query?: TQuery;
         header?: THeader;

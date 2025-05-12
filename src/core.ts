@@ -37,6 +37,8 @@ export type LinzEndpoint = {
   summary?: string;
   description?: string;
   operationId: string;
+  /** Hides the endpoint from showing on the spec, but can still access. */
+  hidden?: boolean;
   parameters?: {
     query?: z.ZodObject<Record<string, ZodMultiMapValues>>;
     header?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -114,6 +116,7 @@ export function endpoint<
   summary?: string;
   description?: string;
   operationId: string;
+  hidden?: boolean;
   parameters?: {
     query?: TQuery;
     header?: THeader;
