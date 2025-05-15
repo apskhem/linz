@@ -125,13 +125,14 @@ export function createApi(
             security: operatorObject.security,
           }),
         });
-        const result =
-          tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
-        const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
 
         if (res.headersSent) {
           return;
         }
+
+        const result =
+          tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
+        const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
 
         // validate result
         const responseValidator =
@@ -148,16 +149,6 @@ export function createApi(
           throw new Error("Internal server error");
         }
 
-        try {
-          responseValidator.body.parse(result.payload.body);
-        } catch (err) {
-          console.error(
-            "[error]: Invalid output format to the corresponding defined output schema"
-          );
-          console.error(String(err));
-          throw new Error("Internal server error");
-        }
-
         // response
         if (
           result.payload.body instanceof Readable ||
@@ -166,18 +157,31 @@ export function createApi(
           res.writeHead(usedStatus, result.payload.headers);
 
           result.payload.body.pipe(res);
-        } else if (typeof result.payload.body === "undefined") {
-          res.writeHead(usedStatus, result.payload.headers).end();
         } else {
-          const out = await responseValidator.serialize(result.payload.body);
+          let responseBody = result.payload.body;
+          try {
+            responseBody = await responseValidator.body.parseAsync(result.payload.body);
+          } catch (err) {
+            console.error(
+              "[error]: Invalid output format to the corresponding defined output schema"
+            );
+            console.error(String(err));
+            throw new Error("Internal server error");
+          }
 
-          res
-            .writeHead(usedStatus, {
-              "content-type": responseValidator.mimeType,
-              ...out.headers,
-              ...result.payload.headers,
-            })
-            .end(out.buffer);
+          if (typeof responseBody === "undefined") {
+            res.writeHead(usedStatus, result.payload.headers).end();
+          } else {
+            const out = await responseValidator.serialize(responseBody);
+
+            res
+              .writeHead(usedStatus, {
+                "content-type": responseValidator.mimeType,
+                ...out.headers,
+                ...result.payload.headers,
+              })
+              .end(out.buffer);
+          }
         }
       } catch (err) {
         let statusCode: number;
