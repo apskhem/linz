@@ -346,6 +346,7 @@ function toJsonSchema(
       if (jsonSchema.properties && isEmpty(jsonSchema.properties[fieldName])) {
         jsonSchema.properties[fieldName] = {
           type: "string",
+          format: "binary",
           contentMediaType: "application/octet-stream",
         };
       }
