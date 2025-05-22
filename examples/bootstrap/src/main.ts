@@ -1,6 +1,7 @@
 import * as http from "http";
 
 import { buildJson, createApi, Router } from "@apskhem/linz";
+import pino from "pino";
 import router from "router";
 import { install } from "source-map-support";
 
@@ -20,6 +21,8 @@ const openApiSpec = buildJson({
   paths: router,
 });
 
+const logger = pino();
+
 createApi(app, router, {
   cors: true,
   request: {
@@ -30,7 +33,8 @@ createApi(app, router, {
     spec: openApiSpec,
     docsPath: "/",
     specPath: "/openapi.json",
-  }
+  },
+  logger
 });
 
 http.createServer(app.handler()).listen(3000);

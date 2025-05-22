@@ -8,6 +8,7 @@ import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
 import type { OpenAPIV3_1 } from "openapi-types";
 import { mapValues } from "radash";
+import { z } from "zod";
 
 import {
   BodyParserError,
@@ -16,9 +17,20 @@ import {
   parseCookies,
   type RequestBodyConfig,
 } from "./internal/middlewares";
-import { formatIncomingRequest, responseError, ValidationError } from "./internal/utils";
+import { formatIncomingRequest, PayloadValidationError } from "./internal/utils";
 
 import { ApiError, type HttpMethod, HttpResponse, type LinzEndpointGroup, METHODS } from "./";
+
+export interface Logger {
+  emergency?: (message: string, ...meta: any[]) => void; // Level 0
+  alert?: (message: string, ...meta: any[]) => void; // Level 1
+  critical?: (message: string, ...meta: any[]) => void; // Level 2
+  error?: (message: string, ...meta: any[]) => void; // Level 3
+  warning?: (message: string, ...meta: any[]) => void; // Level 4
+  notice?: (message: string, ...meta: any[]) => void; // Level 5
+  info?: (message: string, ...meta: any[]) => void; // Level 6
+  debug?: (message: string, ...meta: any[]) => void; // Level 7
+}
 
 export type CreateApiConfig = {
   /**
@@ -56,6 +68,7 @@ export type CreateApiConfig = {
    * Applies to all endpoints.
    */
   request: RequestBodyConfig;
+  logger: Logger;
   fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 
@@ -68,7 +81,7 @@ export function createApi(
     app.use(cors(typeof config.cors === "boolean" ? {} : config.cors));
   }
 
-  console.log(`[server]: Registering ${Object.keys(endpoints).length} endpoints...`);
+  config?.logger?.info?.(`Registering ${Object.keys(endpoints).length} endpoints...`);
 
   const registeredOpId = new Set<string>();
   for (const [methodPath, operatorObject] of Object.entries(endpoints)) {
@@ -85,7 +98,7 @@ export function createApi(
       throw new Error(`Invalid method "${method}" for path ${path}`);
     }
 
-    console.log(`[register]: ${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
+    config?.logger?.info?.(`${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
     app[method as HttpMethod](path, async (req: http.IncomingMessage, res: http.ServerResponse) => {
       try {
@@ -101,14 +114,20 @@ export function createApi(
           }
         }
 
+        // parse query string
+        const queries = req.url ? new URLSearchParams(req.url.split("?")[1]) : [];
+        const mergedQueries: Record<string, string[]> = {};
+        for (const [key, value] of queries.entries()) {
+          (mergedQueries[key] ??= []).push(value);
+        }
+
         // validate
         const validatedReq = formatIncomingRequest(
           {
             body,
-            queries: mapValues(url.parse(req.url || "", true).query, (v) => {
-              const vt = Array.isArray(v) ? v : [v];
-              return config?.request?.multiValueQueryString ? vt : vt.at(-1);
-            }),
+            queries: config?.request?.multiValueQueryString
+              ? mergedQueries
+              : mapValues(mergedQueries, (v) => v.at(-1)),
             cookies: parseCookies(req.headers.cookie ?? ""),
             params: (req as any).params,
             headers: req.headers,
@@ -143,8 +162,8 @@ export function createApi(
           typeof responseValidator === "boolean" ||
           typeof responseValidator === "string"
         ) {
-          console.error(
-            `[error]: There is no corresponding validator defined in schema for status ${usedStatus}/default`
+          config?.logger?.error?.(
+            `There is no corresponding validator defined in schema for status ${usedStatus}/default`
           );
           throw new Error("Internal server error");
         }
@@ -158,16 +177,7 @@ export function createApi(
 
           result.payload.body.pipe(res);
         } else {
-          let responseBody = result.payload.body;
-          try {
-            responseBody = await responseValidator.body.parseAsync(result.payload.body);
-          } catch (err) {
-            console.error(
-              "[error]: Invalid output format to the corresponding defined output schema"
-            );
-            console.error(String(err));
-            throw new Error("Internal server error");
-          }
+          const responseBody = await responseValidator.body.parseAsync(result.payload.body);
 
           if (typeof responseBody === "undefined") {
             res.writeHead(usedStatus, result.payload.headers).end();
@@ -193,17 +203,27 @@ export function createApi(
         } else if (err instanceof BodyParserError) {
           statusCode = err.statusCode;
           message = err.message;
-        } else if (err instanceof ValidationError) {
+        } else if (err instanceof PayloadValidationError) {
           statusCode = 400;
           message = err.errors;
+        } else if (err instanceof z.ZodError) {
+          statusCode = 500;
+          message = "Internal server error";
+
+          config?.logger?.error?.(
+            "Invalid output format to the corresponding defined output schema"
+          );
+          config?.logger?.error?.(JSON.stringify(err));
         } else if (err instanceof Error) {
           statusCode = 500;
           message = err.message;
-          console.error(String(err));
+
+          config?.logger?.error?.(String(err));
         } else {
           statusCode = 500;
           message = String(err);
-          console.error(String(err));
+
+          config?.logger?.error?.(String(err));
         }
 
         res.writeHead(statusCode, { "content-type": "application/json" }).end(
@@ -243,6 +263,11 @@ export function createApi(
 
     const { pathname } = url.parse(req.url || "", true);
 
-    responseError(res, 404, `Cannot find ${req.method} ${pathname}`);
+    res.writeHead(404, { "content-type": "application/json" }).end(
+      JSON.stringify({
+        statusCode: 404,
+        message: `Cannot find ${req.method} ${pathname}`,
+      })
+    );
   });
 }

@@ -12,6 +12,16 @@ type RequestBodyConfig = {
     multiValueUrlEncoded?: boolean;
 };
 
+interface Logger {
+    emergency?: (message: string, ...meta: any[]) => void;
+    alert?: (message: string, ...meta: any[]) => void;
+    critical?: (message: string, ...meta: any[]) => void;
+    error?: (message: string, ...meta: any[]) => void;
+    warning?: (message: string, ...meta: any[]) => void;
+    notice?: (message: string, ...meta: any[]) => void;
+    info?: (message: string, ...meta: any[]) => void;
+    debug?: (message: string, ...meta: any[]) => void;
+}
 type CreateApiConfig = {
     cors: boolean | CorsOptions;
     docs: {
@@ -22,6 +32,7 @@ type CreateApiConfig = {
         theme?: string;
     };
     request: RequestBodyConfig;
+    logger: Logger;
     fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
@@ -227,4 +238,4 @@ declare function applyGroupConfig(group: LinzEndpointGroup, config: {
     security?: LinzEndpoint["security"];
 }): LinzEndpointGroup;
 
-export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

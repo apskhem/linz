@@ -1,7 +1,6 @@
-import { endpoint, FormDataBody, JsonBody, LinzEndpointGroup, OctetStreamBody } from "@apskhem/linz";
-import { applyGroupConfig } from "@apskhem/linz";
-import { z } from "zod";
+import { ApiError, applyGroupConfig, endpoint, FormDataBody, HttpResponse, JsonBody, LinzEndpointGroup } from "@apskhem/linz";
 import * as fs from "fs";
+import { z } from "zod";
 
 import { TAG } from "common/constants/values";
 
@@ -72,19 +71,18 @@ const endpoints: LinzEndpointGroup = {
       return void {};
     }
   }),
-  "post:/echo/tmp": endpoint({
-    requestBody: new JsonBody(
-      z.object({
-        echo: z.string()
-      })
-    ).describe("Echo void result"),
+  "post:/echo/simple/error": endpoint({
     responses: {
-      201: new OctetStreamBody(),
+      201: z.object({}),
       404: true
     },
-    operationId: "echoOctetStream",
+    operationId: "echoError",
     handler: async ({ body }) => {
-      return void {};
+      if (1) {
+        throw new ApiError(404, "Not Found");
+      }
+
+      return {} as any;
     }
   }),
   "post:/echo/simple/upload": endpoint({

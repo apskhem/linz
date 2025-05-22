@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@apskhem/linz": "file:../..",
+    "pino": "^9.7.0",
     "radash": "^12.1.0",
     "source-map-support": "^0.5.21"
   },

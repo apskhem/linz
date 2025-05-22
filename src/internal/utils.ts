@@ -1,15 +1,13 @@
-import * as http from "http";
-
 import { type HTTPMessage, type LinzEndpoint } from "../core";
 
-export class ValidationError extends Error {
+export class PayloadValidationError extends Error {
   errors: { in: keyof HTTPMessage; result: any }[] = [];
 
   constructor() {
     super();
   }
 
-  addIssue(issue: ValidationError["errors"][number]) {
+  addIssue(issue: PayloadValidationError["errors"][number]) {
     this.errors.push(issue);
   }
 
@@ -22,7 +20,7 @@ export function formatIncomingRequest(
   message: Record<keyof HTTPMessage, any>,
   validator: LinzEndpoint
 ): Readonly<HTTPMessage> {
-  const errors = new ValidationError();
+  const errors = new PayloadValidationError();
 
   const resultBody = validator.requestBody?.body.safeParse(message.body);
   if (resultBody?.error) {
@@ -71,25 +69,6 @@ export function formatIncomingRequest(
     headers: (resultHeader?.data as HTTPMessage["headers"]) ?? {},
     cookies: (resultCookie?.data as HTTPMessage["cookies"]) ?? {},
   };
-}
-
-export function responseError(
-  res: http.ServerResponse,
-  statusCode: number,
-  message: string,
-  loggerScope?: string
-): void {
-  if (typeof loggerScope === "string") {
-    if (loggerScope) {
-      console.error(`[error:${loggerScope}]: ${message}`);
-    } else {
-      console.error(`[error]: ${message}`);
-    }
-  }
-
-  res
-    .writeHead(statusCode, { "content-type": "application/json" })
-    .end(JSON.stringify({ statusCode, message }));
 }
 
 export function convertPathParams(path: string): { path: string; params: string[] } {
