@@ -4,7 +4,7 @@
     "declaration": true,
     "removeComments": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
+    "target": "es2024",
     "sourceMap": true,
     "outDir": "./tmp",
     "baseUrl": "./src",

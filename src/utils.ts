@@ -47,17 +47,29 @@ export function mergeEndpointGroups(
  *
  * @param {LinzEndpointGroup} group - A group of endpoints, where each endpoint has its own configuration.
  * @param {Object} config - An object containing common configuration options to apply to each endpoint.
- * @param {LinzEndpoint["tags"]} [config.tags] - Optional tags to apply to each endpoint in the group.
- * @param {LinzEndpoint["security"]} [config.security] - Optional security configuration to apply to each endpoint in the group.
  *
  * @returns {LinzEndpointGroup} - A new group of endpoints with the merged configuration for each endpoint.
  */
 export function applyGroupConfig(
   group: LinzEndpointGroup,
-  config: {
-    tags?: LinzEndpoint["tags"];
-    security?: LinzEndpoint["security"];
-  }
+  config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>
 ): LinzEndpointGroup {
-  return mapValues(group, (endpoint) => Object.assign(endpoint, config));
+  return mapValues(group, (endpoint) => {
+    if (config.tags) {
+      endpoint.tags ? endpoint.tags.push(...config.tags) : (endpoint.tags = config.tags.slice());
+    }
+    if (config.security) {
+      endpoint.security
+        ? endpoint.security.push(...config.security)
+        : (endpoint.security = config.security.slice());
+    }
+    if (typeof config.hidden !== "undefined" && typeof endpoint.hidden === "undefined") {
+      endpoint.hidden = config.hidden;
+    }
+    if (typeof config.deprecated !== "undefined" && typeof endpoint.deprecated === "undefined") {
+      endpoint.deprecated = config.deprecated;
+    }
+
+    return endpoint;
+  });
 }

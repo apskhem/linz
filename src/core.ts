@@ -161,13 +161,13 @@ export function endpoint<
 export class HttpResponse<T> {
   constructor(
     public readonly payload: {
-      readonly headers?: Record<string, string>;
+      readonly headers?: http.OutgoingHttpHeaders;
       readonly status?: number;
       readonly body?: T | ReadableStream;
     }
   ) {}
 
-  public static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void> {
+  public static withoutBody(status: number, headers?: http.OutgoingHttpHeaders): HttpResponse<void> {
     return headers ? new HttpResponse({ headers, status }) : new HttpResponse({ status });
   }
 }
@@ -219,7 +219,8 @@ export class AppliedSecurity {
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly msg: string
+    public readonly msg: string,
+    public readonly headers?: http.OutgoingHttpHeaders
   ) {
     super(msg);
   }
@@ -227,7 +228,7 @@ export class ApiError extends Error {
 
 type SerializeResult = {
   buffer: Buffer;
-  headers: http.IncomingHttpHeaders;
+  headers: http.OutgoingHttpHeaders;
 };
 
 abstract class SenderBody<B extends z.ZodType = any> {

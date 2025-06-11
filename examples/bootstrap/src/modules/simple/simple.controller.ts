@@ -77,10 +77,12 @@ const endpoints: LinzEndpointGroup = {
       404: true
     },
     operationId: "echoError",
-    handler: async ({ body }) => {
+    handler: async ({ body }, { res }) => {
       if (1) {
         throw new ApiError(404, "Not Found");
       }
+
+      
 
       return {} as any;
     }

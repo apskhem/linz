@@ -196,10 +196,12 @@ export function createApi(
       } catch (err) {
         let statusCode: number;
         let message: any;
+        let headers: http.OutgoingHttpHeaders = {};
 
         if (err instanceof ApiError) {
           statusCode = err.status;
           message = err.message;
+          headers = err.headers ?? {};
         } else if (err instanceof BodyParserError) {
           statusCode = err.statusCode;
           message = err.message;
@@ -226,7 +228,7 @@ export function createApi(
           config?.logger?.error?.(String(err));
         }
 
-        res.writeHead(statusCode, { "content-type": "application/json" }).end(
+        res.writeHead(statusCode, { "content-type": "application/json", ...headers }).end(
           JSON.stringify({
             statusCode,
             message,

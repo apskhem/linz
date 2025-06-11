@@ -124,16 +124,16 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
 }): LinzEndpoint;
 declare class HttpResponse<T> {
     readonly payload: {
-        readonly headers?: Record<string, string>;
+        readonly headers?: http.OutgoingHttpHeaders;
         readonly status?: number;
         readonly body?: T | ReadableStream;
     };
     constructor(payload: {
-        readonly headers?: Record<string, string>;
+        readonly headers?: http.OutgoingHttpHeaders;
         readonly status?: number;
         readonly body?: T | ReadableStream;
     });
-    static withoutBody(status: number, headers?: Record<string, string>): HttpResponse<void>;
+    static withoutBody(status: number, headers?: http.OutgoingHttpHeaders): HttpResponse<void>;
 }
 interface SecurityConfig {
     name: string;
@@ -156,11 +156,12 @@ declare class AppliedSecurity {
 declare class ApiError extends Error {
     readonly status: number;
     readonly msg: string;
-    constructor(status: number, msg: string);
+    readonly headers?: http.OutgoingHttpHeaders | undefined;
+    constructor(status: number, msg: string, headers?: http.OutgoingHttpHeaders | undefined);
 }
 type SerializeResult = {
     buffer: Buffer;
-    headers: http.IncomingHttpHeaders;
+    headers: http.OutgoingHttpHeaders;
 };
 declare abstract class SenderBody<B extends z.ZodType = any> {
     private _description;
@@ -233,9 +234,6 @@ type BuilderConfig = {
 declare function buildJson(config: BuilderConfig): OpenAPIV3_1.Document;
 
 declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
-declare function applyGroupConfig(group: LinzEndpointGroup, config: {
-    tags?: LinzEndpoint["tags"];
-    security?: LinzEndpoint["security"];
-}): LinzEndpointGroup;
+declare function applyGroupConfig(group: LinzEndpointGroup, config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>): LinzEndpointGroup;
 
 export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
