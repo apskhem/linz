@@ -6,7 +6,7 @@
     "allowSyntheticDefaultImports": true,
     "target": "es2024",
     "sourceMap": true,
-    "outDir": "./tmp",
+    "outDir": "./dist",
     "baseUrl": "./src",
     "skipLibCheck": true,
     
@@ -15,7 +15,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": false,
+    "noPropertyAccessFromIndexSignature": true,
     "forceConsistentCasingInFileNames": true,
     "exactOptionalPropertyTypes": true,
   },
