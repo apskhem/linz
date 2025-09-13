@@ -177,7 +177,7 @@ export function createApi(
 
           result.payload.body.pipe(res);
         } else {
-          const responseBody = await responseValidator.body.parseAsync(result.payload.body);
+          const responseBody = responseValidator.body.parse(result.payload.body);
 
           if (typeof responseBody === "undefined") {
             res.writeHead(usedStatus, result.payload.headers).end();

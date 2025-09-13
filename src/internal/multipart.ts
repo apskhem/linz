@@ -23,12 +23,12 @@ type Part = {
   part: number[];
 };
 
-type Input = {
+type OutputEntry = {
   headers: Record<string, string>;
   filename?: string;
   name?: string;
   type?: string;
-  data: Buffer;
+  data: Uint8Array<ArrayBuffer>;
 };
 
 enum ParsingState {
@@ -38,11 +38,11 @@ enum ParsingState {
   READING_PART_SEPARATOR,
 }
 
-export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
+export function parse(multipartBodyBuffer: Buffer, boundary: string): OutputEntry[] {
   let lastline = "";
   let state: ParsingState = ParsingState.INIT;
   let buffer: number[] = [];
-  const allParts: Input[] = [];
+  const allParts: OutputEntry[] = [];
 
   let currentPartHeaders: string[] = [];
   let formattedCurrentHeaders: Record<string, string> = {};
@@ -111,7 +111,7 @@ export function parse(multipartBodyBuffer: Buffer, boundary: string): Input[] {
   return allParts;
 }
 
-function process(part: Part): Input {
+function process(part: Part): OutputEntry {
   // will transform this object:
   // { header: 'Content-Disposition: form-data; name="uploads[]"; filename="A.txt"',
   // info: 'Content-Type: text/plain',
@@ -123,14 +123,14 @@ function process(part: Part): Input {
   const result = {
     headers: part.headers,
     name: contentDisposition["name"],
-    data: Buffer.from(part.part),
+    data: Uint8Array.from(part.part),
     ...(contentDisposition["filename"] && {
       filename: contentDisposition["filename"],
       type: part.headers["content-type"]?.trim(),
     }),
   };
 
-  return result as Input;
+  return result as OutputEntry;
 }
 
 function parseContentDisposition(contentDisposition: string): Record<string, string | null> {

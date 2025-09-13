@@ -68,16 +68,16 @@ export type LinzEndpoint = {
 type MergeRecordType<T, U> = {
   [K in keyof T]: T[K] | U;
 };
-type MergeZodValues<T> = {
+type MergeZodResponseValues<T> = {
   [K in keyof T]: T[K] extends z.ZodType
-    ? z.infer<T[K]>
+    ? z.input<T[K]>
     : T[K] extends SenderBody
-      ? z.infer<T[K]["body"]>
+      ? z.input<T[K]["body"]>
       : never;
 }[keyof T];
 type MergedResponse<
   T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>,
-> = MergeZodValues<T> extends infer R ? R : never;
+> = MergeZodResponseValues<T> extends infer R ? R : never;
 
 export const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 
@@ -167,7 +167,10 @@ export class HttpResponse<T> {
     }
   ) {}
 
-  public static withoutBody(status: number, headers?: http.OutgoingHttpHeaders): HttpResponse<void> {
+  public static withoutBody(
+    status: number,
+    headers?: http.OutgoingHttpHeaders
+  ): HttpResponse<void> {
     return headers ? new HttpResponse({ headers, status }) : new HttpResponse({ status });
   }
 }

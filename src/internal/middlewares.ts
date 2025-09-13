@@ -97,7 +97,7 @@ export function parseBody(
 
       const data = part.filename
         ? new File([part.data], part.filename, part.type ? { type: part.type } : {})
-        : part.data.toString(charset);
+        : Buffer.from(part.data.buffer).toString(charset);
 
       (mergedItems[part.name] ??= []).push(data);
     }

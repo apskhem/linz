@@ -77,10 +77,10 @@ type LinzEndpoint = {
 type MergeRecordType<T, U> = {
     [K in keyof T]: T[K] | U;
 };
-type MergeZodValues<T> = {
-    [K in keyof T]: T[K] extends z.ZodType ? z.infer<T[K]> : T[K] extends SenderBody ? z.infer<T[K]["body"]> : never;
+type MergeZodResponseValues<T> = {
+    [K in keyof T]: T[K] extends z.ZodType ? z.input<T[K]> : T[K] extends SenderBody ? z.input<T[K]["body"]> : never;
 }[keyof T];
-type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>> = MergeZodValues<T> extends infer R ? R : never;
+type MergedResponse<T extends MergeRecordType<LinzEndpoint["responses"], ConstructorParameters<typeof JsonBody>[0]>> = MergeZodResponseValues<T> extends infer R ? R : never;
 declare const METHODS: readonly ["get", "post", "put", "patch", "delete"];
 type HttpMethod = (typeof METHODS)[number];
 type LinzEndpointGroup = {

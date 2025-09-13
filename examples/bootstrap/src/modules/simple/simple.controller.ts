@@ -1,4 +1,4 @@
-import { ApiError, applyGroupConfig, endpoint, FormDataBody, HttpResponse, JsonBody, LinzEndpointGroup } from "@apskhem/linz";
+import { ApiError, applyGroupConfig, endpoint, FormDataBody, JsonBody, LinzEndpointGroup } from "@apskhem/linz";
 import * as fs from "fs";
 import { z } from "zod";
 
@@ -82,8 +82,6 @@ const endpoints: LinzEndpointGroup = {
         throw new ApiError(404, "Not Found");
       }
 
-      
-
       return {} as any;
     }
   }),
@@ -112,7 +110,7 @@ const endpoints: LinzEndpointGroup = {
     handler: async ({ body }) => {
       const file = body.file;
 
-      fs.writeFileSync(file.name, new Uint8Array(await file.slice().arrayBuffer()))
+      fs.writeFileSync(file.name, await file.bytes())
       return { field: body.field };
     }
   })
