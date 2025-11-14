@@ -79,7 +79,9 @@ const endpoints: LinzEndpointGroup = {
     operationId: "echoError",
     handler: async ({ body }, { res }) => {
       if (1) {
-        throw new ApiError(404, "Not Found");
+        throw new ApiError(404, {
+          detail: "Not Found"
+        });
       }
 
       return {} as any;
@@ -117,6 +119,6 @@ const endpoints: LinzEndpointGroup = {
 };
 
 export default applyGroupConfig(endpoints, {
-  tags: [ TAG.simple ],
+  tags: [TAG.simple],
   security: []
 });

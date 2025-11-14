@@ -37,7 +37,7 @@ type CreateApiConfig = {
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
-type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodNullable<ZodParameterTypes>;
+type ZodParameterTypes = z.ZodString | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodEffects<ZodParameterTypes, any, string>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]> | T;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3_1.TagObject;
@@ -153,11 +153,30 @@ declare class AppliedSecurity {
     constructor(usedSecurity: Security, scopes: string[]);
     authenticate(req: Readonly<http.IncomingMessage>, extensions: Extensions): Promise<void>;
 }
+type JsonApiErrorItem = {
+    id?: string;
+    links?: {
+        about?: string;
+    };
+    status?: string;
+    code?: string;
+    title?: string;
+    detail?: string;
+    source?: {
+        pointer?: string;
+        parameter?: string;
+        header?: string;
+    };
+    meta?: Record<string, any>;
+};
+type JsonApiErrorResponse = {
+    errors: JsonApiErrorItem[];
+};
 declare class ApiError extends Error {
     readonly status: number;
-    readonly msg: string;
+    readonly errors: JsonApiErrorItem | JsonApiErrorItem[];
     readonly headers?: http.OutgoingHttpHeaders | undefined;
-    constructor(status: number, msg: string, headers?: http.OutgoingHttpHeaders | undefined);
+    constructor(status: number, errors: JsonApiErrorItem | JsonApiErrorItem[], headers?: http.OutgoingHttpHeaders | undefined);
 }
 type SerializeResult = {
     buffer: Buffer;
@@ -236,4 +255,4 @@ declare function buildJson(config: BuilderConfig): OpenAPIV3_1.Document;
 declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
 declare function applyGroupConfig(group: LinzEndpointGroup, config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>): LinzEndpointGroup;
 
-export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, type JsonApiErrorItem, type JsonApiErrorResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };

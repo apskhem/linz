@@ -8,15 +8,10 @@ import { encode, generateBoundary } from "./internal/multipart";
 
 type ZodParameterTypes =
   | z.ZodString
-  | z.ZodNumber
-  | z.ZodNaN
-  | z.ZodBigInt
-  | z.ZodBoolean
-  | z.ZodDate
   | z.ZodUndefined
   | z.ZodEnum<[string, ...string[]]>
   | z.ZodOptional<ZodParameterTypes>
-  | z.ZodNullable<ZodParameterTypes>;
+  | z.ZodEffects<ZodParameterTypes, any, string>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> =
   | z.ZodArray<T>
   | z.ZodTuple<[T, ...T[]]>
@@ -219,13 +214,34 @@ export class AppliedSecurity {
   }
 }
 
+export type JsonApiErrorItem = {
+  id?: string;
+  links?: {
+    about?: string;
+  };
+  status?: string;
+  code?: string;
+  title?: string;
+  detail?: string;
+  source?: {
+    pointer?: string;
+    parameter?: string;
+    header?: string;
+  };
+  meta?: Record<string, any>;
+};
+
+export type JsonApiErrorResponse = {
+  errors: JsonApiErrorItem[];
+};
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly msg: string,
+    public readonly errors: JsonApiErrorItem | JsonApiErrorItem[],
     public readonly headers?: http.OutgoingHttpHeaders
   ) {
-    super(msg);
+    super();
   }
 }
 

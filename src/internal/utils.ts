@@ -1,5 +1,13 @@
 import { type HTTPMessage, type LinzEndpoint } from "../core";
 
+function fmtError(err: unknown): string {
+  try {
+    return JSON.parse(String(err));
+  } catch {
+    return String(err);
+  }
+}
+
 export class PayloadValidationError extends Error {
   errors: { in: keyof HTTPMessage; result: any }[] = [];
 
@@ -22,39 +30,83 @@ export function formatIncomingRequest(
 ): Readonly<HTTPMessage> {
   const errors = new PayloadValidationError();
 
-  const resultBody = validator.requestBody?.body.safeParse(message.body);
-  if (resultBody?.error) {
+  let resultBody;
+  try {
+    resultBody = validator.requestBody?.body.safeParse(message.body);
+    if (resultBody?.error) {
+      errors.addIssue({
+        in: "body",
+        result: resultBody.error.errors,
+      });
+    }
+  } catch (error) {
     errors.addIssue({
       in: "body",
-      result: resultBody.error.errors,
+      result: fmtError(error),
     });
   }
-  const resultQuery = validator.parameters?.query?.safeParse(message.queries);
-  if (resultQuery?.error) {
+
+  let resultQuery;
+  try {
+    resultQuery = validator.parameters?.query?.safeParse(message.queries);
+    if (resultQuery?.error) {
+      errors.addIssue({
+        in: "queries",
+        result: resultQuery.error.errors,
+      });
+    }
+  } catch (error) {
     errors.addIssue({
       in: "queries",
-      result: resultQuery.error.errors,
+      result: fmtError(error),
     });
   }
-  const resultPath = validator.parameters?.path?.safeParse(message.params);
-  if (resultPath?.error) {
+
+  let resultPath;
+  try {
+    resultPath = validator.parameters?.path?.safeParse(message.params);
+    if (resultPath?.error) {
+      errors.addIssue({
+        in: "params",
+        result: resultPath.error.errors,
+      });
+    }
+  } catch (error) {
     errors.addIssue({
       in: "params",
-      result: resultPath.error.errors,
+      result: fmtError(error),
     });
   }
-  const resultHeader = validator.parameters?.header?.safeParse(message.headers);
-  if (resultHeader?.error) {
+
+  let resultHeader;
+  try {
+    resultHeader = validator.parameters?.header?.safeParse(message.headers);
+    if (resultHeader?.error) {
+      errors.addIssue({
+        in: "headers",
+        result: resultHeader.error.errors,
+      });
+    }
+  } catch (error) {
     errors.addIssue({
       in: "headers",
-      result: resultHeader.error.errors,
+      result: fmtError(error),
     });
   }
-  const resultCookie = validator.parameters?.cookie?.safeParse(message.cookies);
-  if (resultCookie?.error) {
+
+  let resultCookie;
+  try {
+    resultCookie = validator.parameters?.cookie?.safeParse(message.cookies);
+    if (resultCookie?.error) {
+      errors.addIssue({
+        in: "cookies",
+        result: resultCookie.error.errors,
+      });
+    }
+  } catch (error) {
     errors.addIssue({
       in: "cookies",
-      result: resultCookie.error.errors,
+      result: fmtError(error),
     });
   }
 

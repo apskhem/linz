@@ -16,55 +16,75 @@ import {
 } from ".";
 import zodToJsonSchema from "zod-to-json-schema";
 
-const GENERAL_API_ERROR_COMPONENT_NAME = "GeneralApiError";
-const VALIDATION_ERROR_COMPONENT_NAME = "ValidationError";
-
-const ZOD_ISSUE_SCHEMA = z
+const JsonApiErrorItem = z
   .object({
-    code: z.enum([
-      "invalid_type",
-      "invalid_literal",
-      "unrecognized_keys",
-      "invalid_union",
-      "invalid_union_discriminator",
-      "invalid_enum_value",
-      "invalid_arguments",
-      "invalid_return_type",
-      "invalid_date",
-      "invalid_string",
-      "too_small",
-      "too_big",
-      "invalid_intersection_types",
-      "not_multiple_of",
-      "not_finite",
-      "custom",
-    ]),
-    path: z.union([z.string(), z.number().int().min(0)]).array(),
-    fatal: z.boolean().optional(),
-    message: z.string(),
+    id: z
+      .string()
+      .optional()
+      .describe("A unique identifier for this particular occurrence of the problem."),
+    links: z
+      .object({
+        about: z
+          .string()
+          .url()
+          .optional()
+          .describe("A link that leads to further details about this particular error."),
+      })
+      .optional()
+      .describe("Links that lead to further details about the error."),
+    status: z
+      .string()
+      .optional()
+      .describe("HTTP status code applicable to this error, represented as a string."),
+    code: z
+      .string()
+      .optional()
+      .describe("An application-specific error code identifying the type of error."),
+    title: z
+      .string()
+      .optional()
+      .describe(
+        "A short, human-readable summary of the problem that should not change from occurrence to occurrence."
+      ),
+    detail: z
+      .string()
+      .optional()
+      .describe("A human-readable explanation specific to this occurrence of the problem."),
+    source: z
+      .object({
+        pointer: z
+          .string()
+          .optional()
+          .describe(
+            "JSON Pointer to the request entity where the error originated (e.g., /data/attributes/email)."
+          ),
+        parameter: z
+          .string()
+          .optional()
+          .describe("Query parameter name that caused the error (e.g., 'sort')."),
+        header: z
+          .string()
+          .optional()
+          .describe(
+            "A string indicating the name of a single request header which caused the error."
+          ),
+      })
+      .optional()
+      .describe("An object containing references to the source of the error."),
+    meta: z
+      .record(z.any())
+      .optional()
+      .describe("A meta object containing non-standard, implementation-specific details."),
   })
-  .passthrough();
+  .describe("A single error object conforming to JSON:API specification.");
 
-const ZOD_ERROR_SCHEMA = z.object({
-  in: z
-    .enum(["body", "queries", "params", "headers", "cookies"])
-    .describe("The part of a request where data validation failed"),
-  result: z.array(ZOD_ISSUE_SCHEMA).describe("An array of error items"),
-});
-
-const GENERAL_ERROR_SCHEMA = z
+const JsonApiErrorResponse = z
   .object({
-    statusCode: z.number().int().min(100).max(599).describe("The HTTP response status code"),
-    message: z.string().describe("The message associated with the error"),
+    errors: z.array(JsonApiErrorItem).describe("Array of JSON:API error objects."),
   })
-  .describe("A general HTTP error response");
+  .describe("JSON:API error response object.");
 
-const VALIDATION_ERROR_SCHEMA = GENERAL_ERROR_SCHEMA.extend({
-  message: z.union([
-    z.array(ZOD_ERROR_SCHEMA).describe("An array of error schemas detailing validation issues"),
-    z.string().describe("Alternatively, a simple error message"),
-  ]),
-}).describe("An error related to the validation process with more detailed information");
+const JSON_API_ERROR_COMPONENT_NAME = "JsonApiError";
 
 const JSON_SCHEMA_DIALECTS = [
   "https://spec.openapis.org/oas/3.1/dialect/base",
@@ -233,7 +253,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
             "No description",
           content:
             typeof v === "boolean" || typeof v === "string"
-              ? intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME)
+              ? intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME)
               : intoContentTypeRef(
                   v.mimeType,
                   responseSchemaName,
@@ -243,18 +263,18 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
             description: getResponseStatusDesc(operationObject.responses, 400) || httpStatus[400],
-            content: intoContentTypeRef(JsonBody.mimeType, VALIDATION_ERROR_COMPONENT_NAME),
+            content: intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME),
           },
         }),
         ...(operationObject.security?.length && {
           "401": {
             description: getResponseStatusDesc(operationObject.responses, 401) || httpStatus[401],
-            content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME),
+            content: intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME),
           },
         }),
         "500": {
           description: getResponseStatusDesc(operationObject.responses, 500) || httpStatus[500],
-          content: intoContentTypeRef(JsonBody.mimeType, GENERAL_API_ERROR_COMPONENT_NAME),
+          content: intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME),
         },
       },
     };
@@ -273,8 +293,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
     components: {
       schemas: {
         ...schemaComponent,
-        [GENERAL_API_ERROR_COMPONENT_NAME]: toJsonSchema(GENERAL_ERROR_SCHEMA),
-        [VALIDATION_ERROR_COMPONENT_NAME]: toJsonSchema(VALIDATION_ERROR_SCHEMA),
+        [JSON_API_ERROR_COMPONENT_NAME]: toJsonSchema(JsonApiErrorResponse),
         ...mapEntries(config.additionalSchemas ?? {}, (k, v) => [
           pascal(title(k)),
           toJsonSchema(v),

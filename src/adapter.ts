@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as http from "http";
 import * as path from "path";
 import { Readable } from "stream";
-import * as url from "url";
 
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
@@ -195,22 +194,36 @@ export function createApi(
         }
       } catch (err) {
         let statusCode: number;
-        let message: any;
+        let errors = [];
         let headers: http.OutgoingHttpHeaders = {};
 
         if (err instanceof ApiError) {
           statusCode = err.status;
-          message = err.message;
-          headers = err.headers ?? {};
+          if (Array.isArray(err.errors)) {
+            errors.push(...err.errors);
+          } else {
+            errors.push(err.errors);
+          }
+          if (err.headers) {
+            headers = err.headers;
+          }
         } else if (err instanceof BodyParserError) {
           statusCode = err.statusCode;
-          message = err.message;
+          errors.push({
+            detail: err.message,
+          });
         } else if (err instanceof PayloadValidationError) {
           statusCode = 400;
-          message = err.errors;
+          errors.push(
+            ...err.errors.map((e) => ({
+              meta: e,
+            }))
+          );
         } else if (err instanceof z.ZodError) {
           statusCode = 500;
-          message = "Internal server error";
+          errors.push({
+            detail: "Internal server error",
+          });
 
           config?.logger?.error?.(
             "Invalid output format to the corresponding defined output schema"
@@ -218,22 +231,23 @@ export function createApi(
           config?.logger?.error?.(JSON.stringify(err));
         } else if (err instanceof Error) {
           statusCode = 500;
-          message = err.message;
+          errors.push({
+            detail: err.message,
+          });
 
           config?.logger?.error?.(String(err));
         } else {
           statusCode = 500;
-          message = String(err);
+          errors.push({
+            detail: String(err),
+          });
 
           config?.logger?.error?.(String(err));
         }
 
-        res.writeHead(statusCode, { "content-type": "application/json", ...headers }).end(
-          JSON.stringify({
-            statusCode,
-            message,
-          })
-        );
+        res
+          .writeHead(statusCode, { "content-type": "application/json", ...headers })
+          .end(JSON.stringify({ errors }));
       }
     });
   }
@@ -263,12 +277,15 @@ export function createApi(
       return;
     }
 
-    const { pathname } = url.parse(req.url || "", true);
+    const { pathname } = new URL(req.url || "", `http://${req.headers.host}`);
 
     res.writeHead(404, { "content-type": "application/json" }).end(
       JSON.stringify({
-        statusCode: 404,
-        message: `Cannot find ${req.method} ${pathname}`,
+        errors: [
+          {
+            detail: `Cannot find ${req.method} ${pathname}`,
+          },
+        ],
       })
     );
   });
