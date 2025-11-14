@@ -8,6 +8,11 @@ import { encode, generateBoundary } from "./internal/multipart";
 
 type ZodParameterTypes =
   | z.ZodString
+  | z.ZodNumber
+  | z.ZodNaN
+  | z.ZodBigInt
+  | z.ZodBoolean
+  | z.ZodDate
   | z.ZodUndefined
   | z.ZodEnum<[string, ...string[]]>
   | z.ZodOptional<ZodParameterTypes>

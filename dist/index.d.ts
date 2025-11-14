@@ -37,7 +37,7 @@ type CreateApiConfig = {
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
-type ZodParameterTypes = z.ZodString | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodEffects<ZodParameterTypes, any, string>;
+type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodEffects<ZodParameterTypes, any, string>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]> | T;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3_1.TagObject;
