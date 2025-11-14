@@ -16,7 +16,8 @@ type ZodParameterTypes =
   | z.ZodUndefined
   | z.ZodEnum<[string, ...string[]]>
   | z.ZodOptional<ZodParameterTypes>
-  | z.ZodEffects<ZodParameterTypes, any, string>;
+  | z.ZodEffects<ZodParameterTypes, any, string>
+  | z.ZodDefault<ZodParameterTypes>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> =
   | z.ZodArray<T>
   | z.ZodTuple<[T, ...T[]]>
