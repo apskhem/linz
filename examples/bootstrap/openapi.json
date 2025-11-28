@@ -1,0 +1,560 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Linz Bootstrap API",
+    "version": "1.0.0"
+  },
+  "jsonSchemaDialect": "https://spec.openapis.org/oas/3.1/dialect/base",
+  "paths": {
+    "/v1/echo/{path}": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoPathSimple",
+        "operationId": "echoPathSimple",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoPathSimpleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/echo/simple/body": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoBodySimple",
+        "operationId": "echoBodySimple",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EchoBodySimpleRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoBodySimpleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/echo/simple/query": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoBodyQuery",
+        "operationId": "echoBodyQuery",
+        "parameters": [
+          {
+            "name": "echo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoBodyQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/echo/simple/void": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoVoidSimple",
+        "operationId": "echoVoidSimple",
+        "requestBody": {
+          "description": "Echo void result",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EchoVoidSimpleRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/echo/simple/error": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoError",
+        "operationId": "echoError",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/echo/simple/upload": {
+      "post": {
+        "tags": [
+          "Simple"
+        ],
+        "summary": "echoUploadSimple",
+        "operationId": "echoUploadSimple",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/EchoUploadSimpleRequestBody"
+              },
+              "encoding": {
+                "file": {
+                  "contentType": "image/png, image/jpeg",
+                  "headers": {
+                    "X-Custom-Header": {
+                      "description": "This is a custom header",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EchoUploadSimpleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EchoPathSimpleResponse": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "EchoBodySimpleRequestBody": {
+        "type": "object",
+        "properties": {
+          "echo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "echo"
+        ],
+        "additionalProperties": false
+      },
+      "EchoBodySimpleResponse": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "EchoBodyQueryResponse": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "EchoVoidSimpleRequestBody": {
+        "type": "object",
+        "properties": {
+          "echo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "echo"
+        ],
+        "additionalProperties": false
+      },
+      "EchoErrorResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "EchoUploadSimpleRequestBody": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "contentMediaType": "application/octet-stream"
+          },
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "field"
+        ],
+        "additionalProperties": false
+      },
+      "EchoUploadSimpleResponse": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "additionalProperties": false
+      },
+      "JsonApiError": {
+        "description": "JSON:API error response object.",
+        "type": "object",
+        "properties": {
+          "errors": {
+            "description": "Array of JSON:API error objects.",
+            "type": "array",
+            "items": {
+              "description": "A single error object conforming to JSON:API specification.",
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "A unique identifier for this particular occurrence of the problem.",
+                  "type": "string"
+                },
+                "links": {
+                  "description": "Links that lead to further details about the error.",
+                  "type": "object",
+                  "properties": {
+                    "about": {
+                      "description": "A link that leads to further details about this particular error.",
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "status": {
+                  "description": "HTTP status code applicable to this error, represented as a string.",
+                  "type": "string"
+                },
+                "code": {
+                  "description": "An application-specific error code identifying the type of error.",
+                  "type": "string"
+                },
+                "title": {
+                  "description": "A short, human-readable summary of the problem that should not change from occurrence to occurrence.",
+                  "type": "string"
+                },
+                "detail": {
+                  "description": "A human-readable explanation specific to this occurrence of the problem.",
+                  "type": "string"
+                },
+                "source": {
+                  "description": "An object containing references to the source of the error.",
+                  "type": "object",
+                  "properties": {
+                    "pointer": {
+                      "description": "JSON Pointer to the request entity where the error originated (e.g., /data/attributes/email).",
+                      "type": "string"
+                    },
+                    "parameter": {
+                      "description": "Query parameter name that caused the error (e.g., 'sort').",
+                      "type": "string"
+                    },
+                    "header": {
+                      "description": "A string indicating the name of a single request header which caused the error.",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "meta": {
+                  "description": "A meta object containing non-standard, implementation-specific details.",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "errors"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Simple"
+    }
+  ]
+}

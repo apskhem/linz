@@ -14,13 +14,13 @@ type ZodParameterTypes =
   | z.ZodBoolean
   | z.ZodDate
   | z.ZodUndefined
-  | z.ZodEnum<[string, ...string[]]>
-  | z.ZodOptional<ZodParameterTypes>
-  | z.ZodEffects<ZodParameterTypes, any, string>
-  | z.ZodDefault<ZodParameterTypes>;
+  | z.ZodEnum<Record<string, string>>
+  | z.ZodOptional<z.ZodType>
+  | z.ZodPipe<z.ZodType, z.ZodTransform<any, string>>
+  | z.ZodDefault<z.ZodType>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> =
   | z.ZodArray<T>
-  | z.ZodTuple<[T, ...T[]]>
+  | z.ZodTuple<T[]>
   | T;
 
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
@@ -130,11 +130,11 @@ export function endpoint<
   security?: AppliedSecurity[];
   handler: (
     message: Readonly<{
-      queries: z.infer<TQuery>;
-      headers: z.infer<THeader>;
-      params: z.infer<TPath>;
-      cookies: z.infer<TCookie>;
-      body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
+      queries: z.output<TQuery>;
+      headers: z.output<THeader>;
+      params: z.output<TPath>;
+      cookies: z.output<TCookie>;
+      body: z.output<TBody extends SenderBody ? TBody["body"] : TBody>;
     }>,
     ctx: {
       security?: AppliedSecurity[];
@@ -145,7 +145,7 @@ export function endpoint<
   ) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint {
   return {
-    ...endpoint,
+    ...(endpoint as any),
     ...(endpoint.requestBody &&
       !(endpoint.requestBody instanceof SenderBody) && {
         requestBody: new JsonBody(endpoint.requestBody),
@@ -295,9 +295,13 @@ abstract class SenderBody<B extends z.ZodType = any> {
   getExamples(): SenderBody["_examples"] {
     return this._examples;
   }
+
+  parse(payload: any): z.output<B> {
+    return this.body.parse(payload);
+  }
 }
 
-export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
+export class JsonBody<B extends z.ZodType = any> extends SenderBody<B> {
   static readonly mimeType: string = "application/json";
 
   constructor(public readonly body: B) {
@@ -316,7 +320,7 @@ export class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends Sender
   }
 }
 
-type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
+type FormDataValidator = ZodParameterTypes | z.ZodCustom<File, File>;
 
 export class FormDataBody<
   B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any,
@@ -383,16 +387,14 @@ export class UrlEncodedBody<
   }
 }
 
-export class OctetStreamBody<
-  B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any,
-> extends SenderBody<B> {
+export class OctetStreamBody<B extends z.ZodCustom<Buffer, Buffer> = any> extends SenderBody<B> {
   static readonly mimeType: string = "application/octet-stream";
 
   constructor(public readonly body: B = z.instanceof(Buffer) as B) {
     super();
   }
 
-  override async serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult> {
+  override async serialize<T extends z.output<B>>(data: T): Promise<SerializeResult> {
     return {
       buffer: data,
       headers: {},

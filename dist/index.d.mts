@@ -37,8 +37,8 @@ type CreateApiConfig = {
 };
 declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
 
-type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<[string, ...string[]]> | z.ZodOptional<ZodParameterTypes> | z.ZodEffects<ZodParameterTypes, any, string> | z.ZodDefault<ZodParameterTypes>;
-type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<[T, ...T[]]> | T;
+type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<Record<string, string>> | z.ZodOptional<z.ZodType> | z.ZodPipe<z.ZodType, z.ZodTransform<any, string>> | z.ZodDefault<z.ZodType>;
+type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<T[]> | T;
 type Extensions<T extends Record<string, any> = Record<string, any>> = T;
 type Tag = OpenAPIV3_1.TagObject;
 type EncodingItem = {
@@ -110,11 +110,11 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
     deprecated?: boolean;
     security?: AppliedSecurity[];
     handler: (message: Readonly<{
-        queries: z.infer<TQuery>;
-        headers: z.infer<THeader>;
-        params: z.infer<TPath>;
-        cookies: z.infer<TCookie>;
-        body: z.infer<TBody extends SenderBody ? TBody["body"] : TBody>;
+        queries: z.output<TQuery>;
+        headers: z.output<THeader>;
+        params: z.output<TPath>;
+        cookies: z.output<TCookie>;
+        body: z.output<TBody extends SenderBody ? TBody["body"] : TBody>;
     }>, ctx: {
         security?: AppliedSecurity[];
         extensions: TExt;
@@ -195,15 +195,16 @@ declare abstract class SenderBody<B extends z.ZodType = any> {
     get requiredHeaders(): SenderBody["_headers"];
     setExamples(examples: SenderBody["_examples"]): this;
     getExamples(): SenderBody["_examples"];
+    parse(payload: any): z.output<B>;
 }
-declare class JsonBody<B extends z.ZodFirstPartySchemaTypes = any> extends SenderBody<B> {
+declare class JsonBody<B extends z.ZodType = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType: string;
     constructor(body: B);
     serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
-type FormDataValidator = ZodParameterTypes | z.ZodType<File, z.ZodTypeDef, File>;
+type FormDataValidator = ZodParameterTypes | z.ZodCustom<File, File>;
 declare class FormDataBody<B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
     readonly body: B;
     readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
@@ -220,11 +221,11 @@ declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodMultiMapVal
     serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
-declare class OctetStreamBody<B extends z.ZodType<Buffer, z.ZodTypeDef, Buffer> = any> extends SenderBody<B> {
+declare class OctetStreamBody<B extends z.ZodCustom<Buffer, Buffer> = any> extends SenderBody<B> {
     readonly body: B;
     static readonly mimeType: string;
     constructor(body?: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
+    serialize<T extends z.output<B>>(data: T): Promise<SerializeResult>;
     get mimeType(): string;
 }
 declare class TextBody<B extends z.ZodString = any> extends SenderBody<B> {

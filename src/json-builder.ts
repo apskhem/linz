@@ -14,7 +14,6 @@ import {
   Security,
   UrlEncodedBody,
 } from ".";
-import zodToJsonSchema from "zod-to-json-schema";
 
 const JsonApiErrorItem = z
   .object({
@@ -72,7 +71,7 @@ const JsonApiErrorItem = z
       .optional()
       .describe("An object containing references to the source of the error."),
     meta: z
-      .record(z.any())
+      .record(z.string(), z.any())
       .optional()
       .describe("A meta object containing non-standard, implementation-specific details."),
   })
@@ -186,7 +185,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
     const requestBodySchemaName = `${pascal(title(operationObject.operationId))}RequestBody`;
     if (
       operationObject.requestBody &&
-      operationObject.requestBody.body._def.typeName !== z.ZodVoid.name &&
+      operationObject.requestBody.body.type !== z.void().type &&
       !(operationObject.requestBody instanceof OctetStreamBody)
     ) {
       schemaComponent[requestBodySchemaName] = toJsonSchema(
@@ -201,7 +200,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
       if (schema instanceof OctetStreamBody) {
         continue;
       }
-      if (typeof schema === "object" && schema.body._def.typeName !== z.ZodVoid.name) {
+      if (typeof schema === "object" && schema.body.type !== z.void().type) {
         schemaComponent[responseSchemaName] = toJsonSchema(schema.body, schema.mimeType);
       }
     }
@@ -235,7 +234,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
           content: intoContentTypeRef(
             operationObject.requestBody.mimeType,
             requestBodySchemaName,
-            operationObject.requestBody.body._def.typeName === z.ZodVoid.name ||
+            operationObject.requestBody.body.type === z.void().type ||
               operationObject.requestBody instanceof OctetStreamBody,
             operationObject.requestBody instanceof FormDataBody ||
               operationObject.requestBody instanceof UrlEncodedBody
@@ -257,7 +256,7 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
               : intoContentTypeRef(
                   v.mimeType,
                   responseSchemaName,
-                  v.body._def.typeName === z.ZodVoid.name || v instanceof OctetStreamBody
+                  v.body.type === z.void().type || v instanceof OctetStreamBody
                 ),
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
@@ -351,13 +350,9 @@ function getResponseStatusDesc(response: LinzEndpoint["responses"], status: numb
   return typeof tmp === "string" ? tmp : null;
 }
 
-function toJsonSchema(
-  schema: Parameters<typeof zodToJsonSchema>[0],
-  contentType?: string
-): OpenAPIV3_1.SchemaObject {
-  let jsonSchema = zodToJsonSchema(schema, {
-    target: "jsonSchema2019-09",
-    $refStrategy: "none",
+function toJsonSchema(schema: z.ZodType, contentType?: string): OpenAPIV3_1.SchemaObject {
+  let jsonSchema = z.toJSONSchema(schema, {
+    unrepresentable: "any",
   }) as OpenAPIV3_1.SchemaObject;
 
   if (contentType === FormDataBody.mimeType) {

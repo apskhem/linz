@@ -36,7 +36,7 @@ export function formatIncomingRequest(
     if (resultBody?.error) {
       errors.addIssue({
         in: "body",
-        result: resultBody.error.errors,
+        result: resultBody.error.issues,
       });
     }
   } catch (error) {
@@ -52,7 +52,7 @@ export function formatIncomingRequest(
     if (resultQuery?.error) {
       errors.addIssue({
         in: "queries",
-        result: resultQuery.error.errors,
+        result: resultQuery.error.issues,
       });
     }
   } catch (error) {
@@ -68,7 +68,7 @@ export function formatIncomingRequest(
     if (resultPath?.error) {
       errors.addIssue({
         in: "params",
-        result: resultPath.error.errors,
+        result: resultPath.error.issues,
       });
     }
   } catch (error) {
@@ -84,7 +84,7 @@ export function formatIncomingRequest(
     if (resultHeader?.error) {
       errors.addIssue({
         in: "headers",
-        result: resultHeader.error.errors,
+        result: resultHeader.error.issues,
       });
     }
   } catch (error) {
@@ -100,7 +100,7 @@ export function formatIncomingRequest(
     if (resultCookie?.error) {
       errors.addIssue({
         in: "cookies",
-        result: resultCookie.error.errors,
+        result: resultCookie.error.issues,
       });
     }
   } catch (error) {
