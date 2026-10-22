@@ -43,3 +43,6 @@ src/common/key
 
 # end-to-end test build
 e2e/.build
+
+# benchmark build
+bench/.build

@@ -70,6 +70,7 @@ npm run check      # type-check
 npm run lint       # lint with oxlint
 npm test           # unit and integration tests
 npm run test:e2e   # end-to-end HTTP tests with Hurl
+npm run bench      # HTTP throughput against the bare router
 npm run build      # bundle into dist/
 ```
 

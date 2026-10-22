@@ -37,6 +37,7 @@
   },
   "globals": {},
   "ignorePatterns": [
-    "e2e/.build"
+    "e2e/.build",
+    "bench/.build"
   ]
 }
