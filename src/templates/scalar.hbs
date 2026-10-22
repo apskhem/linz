@@ -11,13 +11,15 @@
   <script id="api-reference" data-url="{{specUrl}}"></script>
   <script>
     var configuration = {
-      theme: "{{theme}}" || "purple",
+      theme: "{{js:theme}}",
     }
 
     document.getElementById("api-reference").dataset.configuration =
       JSON.stringify(configuration)
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.75.1/dist/browser/standalone.js"
+    integrity="sha384-G+2Q2i9l3PPfmYkk0b4BAIUrs7xb/DNaTL1wCYYab4c9dIKlCyiqzC0Qx3eq9Wf6"
+    crossorigin="anonymous"></script>
 </body>
 
 </html>

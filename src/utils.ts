@@ -43,7 +43,8 @@ export function mergeEndpointGroups(
 /**
  * Applies a common configuration to all endpoints within a given group of `LinzEndpoint`.
  * The function merges the provided configuration (`tags` and `security`) with each endpoint's
- * existing configuration.
+ * existing configuration. The given group is left untouched, and applying the same tag or
+ * security more than once does not duplicate it.
  *
  * @param {LinzEndpointGroup} group - A group of endpoints, where each endpoint has its own configuration.
  * @param {Object} config - An object containing common configuration options to apply to each endpoint.
@@ -54,22 +55,17 @@ export function applyGroupConfig(
   group: LinzEndpointGroup,
   config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>
 ): LinzEndpointGroup {
-  return mapValues(group, (endpoint) => {
-    if (config.tags) {
-      endpoint.tags ? endpoint.tags.push(...config.tags) : (endpoint.tags = config.tags.slice());
-    }
-    if (config.security) {
-      endpoint.security
-        ? endpoint.security.push(...config.security)
-        : (endpoint.security = config.security.slice());
-    }
-    if (typeof config.hidden !== "undefined" && typeof endpoint.hidden === "undefined") {
-      endpoint.hidden = config.hidden;
-    }
-    if (typeof config.deprecated !== "undefined" && typeof endpoint.deprecated === "undefined") {
-      endpoint.deprecated = config.deprecated;
-    }
-
-    return endpoint;
-  });
+  return mapValues(group, (endpoint) => ({
+    ...endpoint,
+    ...(config.tags && {
+      tags: [...new Set([...(endpoint.tags ?? []), ...config.tags])],
+    }),
+    ...(config.security && {
+      security: [...new Set([...(endpoint.security ?? []), ...config.security])],
+    }),
+    ...(typeof endpoint.hidden === "undefined" &&
+      typeof config.hidden !== "undefined" && { hidden: config.hidden }),
+    ...(typeof endpoint.deprecated === "undefined" &&
+      typeof config.deprecated !== "undefined" && { deprecated: config.deprecated }),
+  }));
 }

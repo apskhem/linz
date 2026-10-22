@@ -14,7 +14,9 @@
       height: 100vh;
     }
   </style>
-  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/redoc@2.5.4/bundles/redoc.standalone.js"
+    integrity="sha384-w447zOpYfw/1Tv/5AK9NfHTlQIqE3RVR6KY62jCyy9zNDgO64cMwGGP1Fj0zJVf5"
+    crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -23,7 +25,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       Redoc.init(
-        "{{specUrl}}",
+        "{{js:specUrl}}",
         {
           scrollYOffset: 50,
           hideDownloadButton: false,

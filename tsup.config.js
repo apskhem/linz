@@ -14,20 +14,17 @@ export default defineConfig({
   minify: true,
   esbuildPlugins: [
     {
-      name: "copy-doc-templates",
+      // inlines doc templates as strings, so the bundle does not depend on `__dirname` (absent in ESM)
+      name: "inline-doc-templates",
       setup(build) {
-        build.onEnd(async () => {
-          fs.mkdirSync("dist/templates", { recursive: true });
-
-          for (const templateName of fs.readdirSync("src/templates")) {
-            const apiDocTemplate = fs.readFileSync(`src/templates/${templateName}`, "utf-8");
-            fs.writeFileSync(`dist/templates/${templateName}`, await minify(apiDocTemplate, {
-              minifyJS: true,
-              minifyCSS: true,
-              collapseWhitespace: true
-            }));
-          }
-        });
+        build.onLoad({ filter: /\.hbs$/ }, async (args) => ({
+          contents: await minify(await fs.promises.readFile(args.path, "utf-8"), {
+            minifyJS: true,
+            minifyCSS: true,
+            collapseWhitespace: true
+          }),
+          loader: "text"
+        }));
       }
     }
   ]

@@ -175,7 +175,8 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
           name,
           in: type,
           ...(description && { description }),
-          ...(isItemRequired && { required: isItemRequired }),
+          // path parameters must always be required as per OpenAPI
+          ...((isItemRequired || type === "path") && { required: true }),
           schema: schema as OpenAPIV3.SchemaObject,
         });
       }
@@ -194,14 +195,15 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
       );
     }
 
-    // collect response objects
-    const responseSchemaName = `${pascal(title(operationObject.operationId))}Response`;
-    for (const [, schema] of Object.entries(operationObject.responses ?? {})) {
+    // collect response objects, each status gets its own component so they cannot overwrite each other
+    const getResponseSchemaName = (status: string) =>
+      `${pascal(title(operationObject.operationId))}${getStatusName(status)}Response`;
+    for (const [status, schema] of Object.entries(operationObject.responses ?? {})) {
       if (schema instanceof OctetStreamBody) {
         continue;
       }
       if (typeof schema === "object" && schema.body.type !== z.void().type) {
-        schemaComponent[responseSchemaName] = toJsonSchema(schema.body, schema.mimeType);
+        schemaComponent[getResponseSchemaName(status)] = toJsonSchema(schema.body, schema.mimeType);
       }
     }
 
@@ -255,13 +257,19 @@ export function buildJson(config: BuilderConfig): OpenAPIV3_1.Document {
               ? intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME)
               : intoContentTypeRef(
                   v.mimeType,
-                  responseSchemaName,
+                  getResponseSchemaName(String(k)),
                   v.body.type === z.void().type || v instanceof OctetStreamBody
                 ),
         })),
         ...((operationObject.requestBody || !isEmpty(operationObject.parameters)) && {
           "400": {
             description: getResponseStatusDesc(operationObject.responses, 400) || httpStatus[400],
+            content: intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME),
+          },
+        }),
+        ...(operationObject.requestBody && {
+          "415": {
+            description: getResponseStatusDesc(operationObject.responses, 415) || httpStatus[415],
             content: intoContentTypeRef(JsonBody.mimeType, JSON_API_ERROR_COMPONENT_NAME),
           },
         }),
@@ -343,6 +351,20 @@ function intoContentTypeRef(
       }),
     },
   };
+}
+
+/**
+ * Converts a response status into a PascalCase name, e.g. `404` -> `NotFound`.
+ * Falls back to the status itself when it has no standard name, e.g. `299` -> `299`.
+ */
+function getStatusName(status: string): string {
+  if (status === "default") {
+    return "Default";
+  }
+
+  const name = httpStatus[`${status}_NAME` as keyof typeof httpStatus];
+
+  return typeof name === "string" ? pascal(title(name.toLowerCase())) : status;
 }
 
 function getResponseStatusDesc(response: LinzEndpoint["responses"], status: number): string | null {

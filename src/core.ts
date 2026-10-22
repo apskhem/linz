@@ -1,4 +1,5 @@
 import * as http from "http";
+import type { Readable } from "stream";
 
 import type { OpenAPIV3_1 as OpenAPIType } from "openapi-types";
 import { mapValues } from "radash";
@@ -164,7 +165,7 @@ export class HttpResponse<T> {
     public readonly payload: {
       readonly headers?: http.OutgoingHttpHeaders;
       readonly status?: number;
-      readonly body?: T | ReadableStream;
+      readonly body?: T | ReadableStream | Readable;
     }
   ) {}
 

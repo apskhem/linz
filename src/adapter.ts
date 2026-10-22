@@ -1,7 +1,7 @@
-import * as fs from "fs";
 import * as http from "http";
-import * as path from "path";
 import { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import type { ReadableStream as NodeReadableStream } from "stream/web";
 
 import { Router } from "@routejs/router";
 import cors, { type CorsOptions } from "cors";
@@ -16,9 +16,20 @@ import {
   parseCookies,
   type RequestBodyConfig,
 } from "./internal/middlewares";
+import { type DocsViewer, renderDocsPage } from "./internal/docs";
 import { formatIncomingRequest, PayloadValidationError } from "./internal/utils";
 
-import { ApiError, type HttpMethod, HttpResponse, type LinzEndpointGroup, METHODS } from "./";
+import {
+  ApiError,
+  type AppliedSecurity,
+  type HttpMethod,
+  HttpResponse,
+  type LinzEndpoint,
+  type LinzEndpointGroup,
+  METHODS,
+} from "./";
+
+const INTERNAL_SERVER_ERROR = "Internal server error";
 
 export interface Logger {
   emergency?: (message: string, ...meta: any[]) => void; // Level 0
@@ -43,7 +54,7 @@ export type CreateApiConfig = {
     /**
      * The documents viewer.
      */
-    viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
+    viewer: DocsViewer;
     /**
      * The OpenAPI spec.
      */
@@ -69,6 +80,14 @@ export type CreateApiConfig = {
   request: RequestBodyConfig;
   logger: Logger;
   fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
+  /**
+   * Registers the catch-all 404 handler (which runs `fallbackHandler` first) after the endpoints.
+   * Disable it to mount more routes on the same router after `createApi`,
+   * then mount `notFoundHandler(config)` last yourself.
+   *
+   * @default true
+   */
+  notFound: boolean;
 };
 
 export function createApi(
@@ -99,19 +118,26 @@ export function createApi(
 
     config?.logger?.info?.(`${operatorObject.operationId} -> ${method.toUpperCase()} ${path}`);
 
+    const defaultStatus = getDefaultStatus(method as HttpMethod, operatorObject.responses);
+
     app[method as HttpMethod](path, async (req: http.IncomingMessage, res: http.ServerResponse) => {
       try {
-        const bodyBuffer = await collectBody(req);
-        const body = parseBody(bodyBuffer, req.headers["content-type"] ?? "");
-
         const extensions = {};
 
-        // process auth (if has) sequentially
+        // process auth (if has) before touching the body, any one of the securities must pass
         if (operatorObject.security?.length) {
-          for (const secOp of operatorObject.security) {
-            await secOp.authenticate(req, extensions);
-          }
+          await authenticateAny(operatorObject.security, req, extensions);
         }
+
+        // only an endpoint declaring a body reads it, and only in the declared content type
+        const body = operatorObject.requestBody
+          ? parseBody(
+              await collectBody(req),
+              req.headers["content-type"] ?? "",
+              config?.request,
+              operatorObject.requestBody.mimeType
+            )
+          : undefined;
 
         // parse query string
         const queries = req.url ? new URLSearchParams(req.url.split("?")[1]) : [];
@@ -150,7 +176,7 @@ export function createApi(
 
         const result =
           tmpResult instanceof HttpResponse ? tmpResult : new HttpResponse({ body: tmpResult });
-        const usedStatus = result.payload.status ?? (method === "post" ? 201 : 200);
+        const usedStatus = result.payload.status ?? defaultStatus;
 
         // validate result
         const responseValidator =
@@ -164,17 +190,24 @@ export function createApi(
           config?.logger?.error?.(
             `There is no corresponding validator defined in schema for status ${usedStatus}/default`
           );
-          throw new Error("Internal server error");
+          throw new Error(INTERNAL_SERVER_ERROR);
         }
 
         // response
-        if (
-          result.payload.body instanceof Readable ||
-          result.payload.body instanceof fs.ReadStream
-        ) {
-          res.writeHead(usedStatus, result.payload.headers);
+        const { body: payloadBody } = result.payload;
+        if (payloadBody instanceof Readable || payloadBody instanceof ReadableStream) {
+          res.writeHead(usedStatus, {
+            "content-type": responseValidator.mimeType,
+            ...result.payload.headers,
+          });
 
-          result.payload.body.pipe(res);
+          // destroys both ends on failure, an error after this point is handled by the guard below
+          await pipeline(
+            payloadBody instanceof Readable
+              ? payloadBody
+              : Readable.fromWeb(payloadBody as NodeReadableStream),
+            res
+          );
         } else {
           const responseBody = responseValidator.parse(result.payload.body);
 
@@ -193,6 +226,15 @@ export function createApi(
           }
         }
       } catch (err) {
+        // the response has already started (e.g. a failed stream), it can only be aborted
+        if (res.headersSent) {
+          config?.logger?.error?.(`Failed after the response was sent: ${formatError(err)}`);
+          if (!res.writableEnded) {
+            res.destroy();
+          }
+          return;
+        }
+
         let statusCode: number;
         let errors = [];
         let headers: http.OutgoingHttpHeaders = {};
@@ -222,27 +264,20 @@ export function createApi(
         } else if (err instanceof z.ZodError) {
           statusCode = 500;
           errors.push({
-            detail: "Internal server error",
+            detail: INTERNAL_SERVER_ERROR,
           });
 
           config?.logger?.error?.(
-            "Invalid output format to the corresponding defined output schema"
+            `Invalid output format to the corresponding defined output schema: ${formatError(err)}`
           );
-          config?.logger?.error?.(JSON.stringify(err));
-        } else if (err instanceof Error) {
-          statusCode = 500;
-          errors.push({
-            detail: err.message,
-          });
-
-          config?.logger?.error?.(String(err));
         } else {
+          // never expose internal details of unexpected errors to clients
           statusCode = 500;
           errors.push({
-            detail: String(err),
+            detail: INTERNAL_SERVER_ERROR,
           });
 
-          config?.logger?.error?.(String(err));
+          config?.logger?.error?.(formatError(err));
         }
 
         res
@@ -255,11 +290,11 @@ export function createApi(
   // docs config
   if (config?.docs) {
     const specJson = JSON.stringify(config.docs.spec);
-    const docTemplate = fs
-      .readFileSync(path.join(__dirname, `./templates/${config.docs.viewer}.hbs`), "utf-8")
-      .replace("{{title}}", config.docs.spec.info.title)
-      .replace("{{specUrl}}", config.docs.specPath)
-      .replace("{{theme}}", config.docs.theme ?? "");
+    const docTemplate = renderDocsPage(config.docs.viewer, {
+      title: config.docs.spec.info.title,
+      specUrl: config.docs.specPath,
+      theme: config.docs.theme,
+    });
 
     app.get(config.docs.specPath, (req: http.IncomingMessage, res: http.ServerResponse) => {
       res.writeHead(200, { "content-type": "application/json" }).end(specJson);
@@ -269,24 +304,97 @@ export function createApi(
     });
   }
 
-  // fallback
-  app.use(async (req: http.IncomingMessage, res: http.ServerResponse) => {
-    await config?.fallbackHandler?.(req, res);
+  if (config?.notFound !== false) {
+    app.use(notFoundHandler(config));
+  }
+}
 
-    if (res.headersSent) {
-      return;
+/**
+ * Creates the catch-all handler, responding 404 unless `fallbackHandler` has responded.
+ * Mount it after every route.
+ */
+export function notFoundHandler(
+  config?: Partial<Pick<CreateApiConfig, "fallbackHandler" | "logger">>
+) {
+  return async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    try {
+      await config?.fallbackHandler?.(req, res);
+
+      if (res.headersSent) {
+        return;
+      }
+
+      const pathname = (req.url ?? "/").split("?")[0];
+
+      res.writeHead(404, { "content-type": "application/json" }).end(
+        JSON.stringify({
+          errors: [
+            {
+              detail: `Cannot find ${req.method} ${pathname}`,
+            },
+          ],
+        })
+      );
+    } catch (err) {
+      config?.logger?.error?.(formatError(err));
+
+      if (!res.headersSent) {
+        res
+          .writeHead(500, { "content-type": "application/json" })
+          .end(JSON.stringify({ errors: [{ detail: INTERNAL_SERVER_ERROR }] }));
+      }
     }
+  };
+}
 
-    const { pathname } = new URL(req.url || "", `http://${req.headers.host}`);
+/**
+ * Uses the conventional status (`201` for `post`, `200` otherwise) when it is defined,
+ * then the lowest defined 2xx status, then the conventional status.
+ */
+function getDefaultStatus(method: HttpMethod, responses: LinzEndpoint["responses"]): number {
+  const conventionalStatus = method === "post" ? 201 : 200;
+  if (conventionalStatus in responses) {
+    return conventionalStatus;
+  }
 
-    res.writeHead(404, { "content-type": "application/json" }).end(
-      JSON.stringify({
-        errors: [
-          {
-            detail: `Cannot find ${req.method} ${pathname}`,
-          },
-        ],
-      })
-    );
-  });
+  const successStatuses = Object.keys(responses)
+    .map(Number)
+    .filter((status) => status >= 200 && status < 300)
+    .sort((a, b) => a - b);
+
+  return successStatuses[0] ?? conventionalStatus;
+}
+
+/**
+ * Includes the stack trace in the message itself, since not every logger
+ * (e.g. pino) keeps extra arguments that do not match a format placeholder.
+ */
+function formatError(err: unknown): string {
+  return err instanceof Error ? (err.stack ?? String(err)) : String(err);
+}
+
+/**
+ * Follows OpenAPI semantics where the listed security requirements are alternatives.
+ * Each attempt gets its own extensions object so a failed attempt cannot leak partial state.
+ * Throws the first failure when none of them passes.
+ */
+async function authenticateAny(
+  securities: AppliedSecurity[],
+  req: http.IncomingMessage,
+  extensions: Record<string, any>
+): Promise<void> {
+  let firstError: unknown;
+
+  for (const secOp of securities) {
+    const attemptExtensions = {};
+    try {
+      await secOp.authenticate(req, attemptExtensions);
+      Object.assign(extensions, attemptExtensions);
+      return;
+    } catch (err) {
+      firstError ??= err;
+    }
+  }
+
+  throw firstError;
 }

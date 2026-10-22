@@ -44,6 +44,12 @@ export class BodyParserError extends Error {
 
 export function collectBody(req: http.IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    // the stream was already consumed (e.g. by a security handler), there is nothing left to read
+    if (req.readableEnded) {
+      resolve(Buffer.alloc(0));
+      return;
+    }
+
     const bufferChunks: Buffer[] = [];
 
     req.on("data", (chunk: Buffer) => bufferChunks.push(chunk));
@@ -52,10 +58,14 @@ export function collectBody(req: http.IncomingMessage): Promise<Buffer> {
   });
 }
 
+/**
+ * Parses a request body. When `expectedType` is given, any other content type is rejected with 415.
+ */
 export function parseBody(
   body: Buffer,
   contentTypeHeader: string,
-  config?: RequestBodyConfig
+  config?: RequestBodyConfig,
+  expectedType?: string
 ): any | undefined {
   if (!body.length) {
     return undefined;
@@ -68,10 +78,14 @@ export function parseBody(
     throw new BodyParserError(400, String(err));
   }
 
-  if (contentType.type === "application/json") {
-    try {
-      const charset = (contentType.parameters["charset"] as BufferEncoding) ?? "utf-8";
+  if (expectedType && contentType.type !== expectedType) {
+    const message = `'${contentType.type}' content type is not supported, expected '${expectedType}'`;
+    throw new BodyParserError(415, message);
+  }
 
+  if (contentType.type === "application/json") {
+    const charset = getCharset(contentType.parameters);
+    try {
       return JSON.parse(body.toString(charset));
     } catch (err) {
       throw new BodyParserError(400, String(err));
@@ -87,25 +101,31 @@ export function parseBody(
 
     const mergedItems: Record<string, (string | File)[]> = {};
     for (const part of parts) {
-      const rawContentType = part.headers["content-type"];
-      const contentType = rawContentType ? parseContentType(rawContentType) : null;
-      const charset = (contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8";
-
       if (!part.name) {
         continue;
       }
 
-      const data = part.filename
-        ? new File([part.data], part.filename, part.type ? { type: part.type } : {})
-        : Buffer.from(part.data.buffer).toString(charset);
+      let data: string | File;
+      if (part.filename) {
+        data = new File([part.data], part.filename, part.type ? { type: part.type } : {});
+      } else {
+        const rawContentType = part.headers["content-type"];
+        let partContentType: ReturnType<typeof parseContentType> | null = null;
+        try {
+          partContentType = rawContentType ? parseContentType(rawContentType) : null;
+        } catch (err) {
+          throw new BodyParserError(400, `Invalid content type of part '${part.name}': ${err}`);
+        }
+
+        data = Buffer.from(part.data.buffer).toString(getCharset(partContentType?.parameters));
+      }
 
       (mergedItems[part.name] ??= []).push(data);
     }
 
     return config?.multiValueFormData ? mergedItems : mapValues(mergedItems, (v) => v.at(-1));
   } else if (contentType.type === "application/x-www-form-urlencoded") {
-    const charset = (contentType?.parameters["charset"] as BufferEncoding) ?? "utf-8";
-    const data = body.toString(charset);
+    const data = body.toString(getCharset(contentType.parameters));
     const dataUrl = new URLSearchParams(data);
 
     const mergedItems: Record<string, string[]> = {};
@@ -116,6 +136,8 @@ export function parseBody(
     return config?.multiValueUrlEncoded ? mergedItems : mapValues(mergedItems, (v) => v.at(-1));
   } else if (contentType.type === "application/octet-stream") {
     return body;
+  } else if (contentType.type.startsWith("text/")) {
+    return body.toString(getCharset(contentType.parameters));
   } else {
     const message = `'${contentType.type}' content type is not supported`;
     throw new BodyParserError(415, message);
@@ -129,9 +151,25 @@ export function parseCookies(cookieHeader: string): Record<string, string> {
       if (!name) {
         return cookies;
       }
-      cookies[name] = decodeURIComponent(rest.join("="));
+      const value = rest.join("=");
+      try {
+        cookies[name] = decodeURIComponent(value);
+      } catch {
+        // keep the raw value of a malformed cookie instead of failing the whole request
+        cookies[name] = value;
+      }
       return cookies;
     },
     {} as Record<string, string>
   );
+}
+
+function getCharset(parameters?: Record<string, string>): BufferEncoding {
+  const charset = parameters?.["charset"] ?? "utf-8";
+
+  if (!Buffer.isEncoding(charset)) {
+    throw new BodyParserError(415, `'${charset}' charset is not supported`);
+  }
+
+  return charset;
 }

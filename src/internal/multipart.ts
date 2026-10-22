@@ -172,7 +172,7 @@ export async function encode(
 
   for (const [key, values] of Object.entries(data)) {
     for (const value of values) {
-      multipartFragments.push(Buffer.from(`--${boundary}`));
+      multipartFragments.push(Buffer.from(`--${boundary}\r\n`));
 
       if (typeof value === "string") {
         multipartFragments.push(
