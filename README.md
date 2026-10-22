@@ -1,38 +1,82 @@
 # Linz
 
-A Node.js web framework with first-class OpenAPI documentation support.
+A Node.js web framework where every endpoint is described once, with [Zod](https://zod.dev) schemas, and that description does the rest:
 
-## Usage
+- **Validates requests**: parameters, headers, cookies and bodies are checked before your handler runs, and invalid requests get a `400` with the issues.
+- **Types handlers**: the handler's input is typed from the schemas, with no casting.
+- **Checks responses**: what a handler returns is checked against the declared response, so the API cannot drift from its documentation.
+- **Generates OpenAPI 3.1**: the spec and an interactive docs page (Scalar, Swagger UI, Redoc, RapiDoc or Stoplight Elements) come from the same definitions.
 
-Install the package from the following commands...
+## Install
 
 ```bash
-npm install git@github.com:apskhem/linz.git#main
+npm install github:apskhem/linz#main zod
 ```
 
-Alternatively, include this line into your `package.json`.
+Linz needs Node.js 20 or later and Zod 4. It ships both ES modules and CommonJS.
 
-```json
-"@apskhem/linz": "github:apskhem/linz#main"
+## Quick start
+
+```ts
+import * as http from "node:http";
+
+import { buildJson, createApi, endpoint, Router } from "@apskhem/linz";
+import { z } from "zod";
+
+const endpoints = {
+  "get:/hello/:name": endpoint({
+    operationId: "sayHello",
+    parameters: { path: z.object({ name: z.string() }) },
+    responses: { 200: z.object({ message: z.string() }) },
+    handler: async ({ params }) => ({ message: `Hello, ${params.name}!` }),
+  }),
+};
+
+const app = new Router();
+
+createApi(app, endpoints, {
+  docs: {
+    viewer: "scalar",
+    spec: buildJson({
+      openapi: "3.1.0",
+      info: { title: "Hello API", version: "1.0.0" },
+      paths: endpoints,
+    }),
+    docsPath: "/docs",
+    specPath: "/openapi.json",
+  },
+});
+
+http.createServer(app.handler()).listen(3000);
 ```
 
-See [`examples/bootstrap`](examples/bootstrap) for a complete example API, with a suggested project layout and a walkthrough of adding endpoints.
+```console
+$ curl localhost:3000/hello/Ada
+{"message":"Hello, Ada!"}
+```
 
-## Limitations
+The interactive docs are at http://localhost:3000/docs and the spec at http://localhost:3000/openapi.json.
 
-Validator Supports
-  - Zod
+## Learn more
 
-Content Type Supports
-  - `application/json`
-  - `application/octet-stream`
-  - `application/x-www-form-urlencoded` (without duplicated keys)
-  - `multipart/form-data` (without duplicated keys)
+- **[Manual](MANUAL.md)**: concepts, how-to guides, configuration reference and notes.
+- **[Example project](examples/bootstrap)**: a complete API with authentication, uploads and a suggested project layout.
+
+## Development
+
+```bash
+npm install
+npm run check      # type-check
+npm run lint       # lint with oxlint
+npm test           # unit and integration tests
+npm run test:e2e   # end-to-end HTTP tests with Hurl
+npm run build      # bundle into dist/
+```
 
 ## Contributing
 
-If you have suggestions for improvements, new features, or encounter any issues, please open an issue or submit a pull request.
+Suggestions, bug reports and pull requests are welcome. Please open an issue to discuss larger changes first.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
