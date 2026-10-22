@@ -7,7 +7,8 @@ export default defineConfig({
   format: ["cjs", "esm"],
   outDir: "dist",
   platform: "node",
-  dts: true,
+  // declarations are emitted by `tsc`, see `tsconfig.build.json`
+  dts: false,
   splitting: false,
   sourcemap: true,
   clean: true,

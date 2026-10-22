@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { convertPathParams, parseMethodPath } from "../../src/internal/paths";
 
 describe(convertPathParams.name, () => {

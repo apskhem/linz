@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { applyGroupConfig, endpoint, type LinzEndpointGroup, Security } from "../src";

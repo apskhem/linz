@@ -2,6 +2,7 @@ import * as http from "http";
 import type { AddressInfo } from "net";
 import { Readable } from "stream";
 
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -128,7 +129,7 @@ async function startServer(config?: Partial<CreateApiConfig>) {
 describe(createApi.name, () => {
   let server: http.Server;
   let url: string;
-  const logger = { error: jest.fn(), info: jest.fn() };
+  const logger = { error: vi.fn(), info: vi.fn() };
 
   beforeEach(() => logger.error.mockClear());
 
@@ -362,7 +363,7 @@ describe("not found handling", () => {
   });
 
   it("should let the handler be mounted manually after other routes", async () => {
-    const fallbackHandler = jest.fn(async () => {});
+    const fallbackHandler = vi.fn(async () => {});
     const app = new Router();
     createApi(app, { "get:/a": ping("getA") }, { notFound: false });
     app.get("/extra", (_: http.IncomingMessage, res: http.ServerResponse) => {

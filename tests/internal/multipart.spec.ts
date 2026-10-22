@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { encode, generateBoundary, parse } from "../../src/internal/multipart";
 
 describe("multipart", () => {

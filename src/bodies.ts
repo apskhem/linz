@@ -173,7 +173,8 @@ export class UrlEncodedBody<
 export class OctetStreamBody<B extends z.ZodCustom<Buffer, Buffer> = any> extends SenderBody<B> {
   static readonly mimeType: string = "application/octet-stream";
 
-  constructor(public readonly body: B = z.instanceof(Buffer) as B) {
+  // the default is only used when no schema is given, so `B` is then its type
+  constructor(public readonly body: B = z.instanceof(Buffer) as unknown as B) {
     super();
   }
 

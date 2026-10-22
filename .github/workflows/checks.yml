@@ -13,6 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    # building needs Node 22.18+ (tsup), the library itself supports Node 20+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
     - name: Setup
       run: npm install
     - name: Run type checks

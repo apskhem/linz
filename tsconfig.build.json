@@ -1,7 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    // emits the type declarations of the published package, see `npm run build`
+    "rootDir": "./src",
+    "outDir": "./dist/types",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    // keep the doc comments, so editors show them to users
+    "removeComments": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "tests", "dist", "**/*.spec.ts"]

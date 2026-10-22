@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { DOCS_VIEWERS, type DocsViewer, renderDocsPage } from "../../src/server/docs";
 
 const viewers = Object.keys(DOCS_VIEWERS) as DocsViewer[];

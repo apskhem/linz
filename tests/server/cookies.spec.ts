@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest";
+
 import { parseCookies } from "../../src/server/cookies";
 
 describe(parseCookies.name, () => {

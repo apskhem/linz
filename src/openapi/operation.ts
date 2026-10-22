@@ -1,4 +1,4 @@
-import httpStatus from "http-status";
+import { status as httpStatus } from "http-status";
 import type { OpenAPIV3, OpenAPIV3_1 } from "openapi-types";
 import { isEmpty, mapValues, pascal, shake, title } from "radash";
 import { z } from "zod";

@@ -9,9 +9,12 @@
     "target": "es2024",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": ".",
     "skipLibCheck": true,
+    // each file must compile on its own, as tsup (esbuild) and Vitest compile them
+    "isolatedModules": true,
     // `@types/*` packages are no longer included automatically since TypeScript 6
-    "types": ["node", "jest"],
+    "types": ["node"],
 
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -22,6 +25,6 @@
     "forceConsistentCasingInFileNames": true,
     "exactOptionalPropertyTypes": true,
   },
-  "include": ["src/**/*.ts", "tests/**/*.spec.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.spec.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "examples", "dist", "*/**.js"]
 }
