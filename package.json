@@ -35,9 +35,8 @@
     "check": "tsc --noEmit",
     "build": "npx tsup",
     "test": "jest",
-    "fmt": "prettier --write './src/**/*.ts'",
-    "lint": "npx oxlint src",
-    "lint:fix": "npx oxlint src --fix"
+    "lint": "oxlint src tests",
+    "lint:fix": "oxlint src tests --fix"
   },
   "dependencies": {
     "@routejs/router": "^3.0.3",
@@ -57,7 +56,6 @@
     "@types/node": "^24.10.1",
     "html-minifier-terser": "^7.2.0",
     "oxlint": "^1.30.0",
-    "prettier": "^3.7.1",
     "ts-jest": "^29.4.5",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
@@ -70,14 +68,17 @@
       "ts",
       "hbs"
     ],
-    "rootDir": "tests",
+    "rootDir": ".",
+    "roots": [
+      "<rootDir>/tests"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest",
-      "^.+\\.hbs$": "<rootDir>/helpers/text-transform.js"
+      "^.+\\.hbs$": "<rootDir>/tests/helpers/text-transform.js"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.ts"
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"

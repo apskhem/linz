@@ -1,4 +1,6 @@
-import { type HTTPMessage, type LinzEndpoint } from "../core";
+import type { z } from "zod";
+
+import type { HTTPMessage, LinzEndpoint } from "../endpoint";
 
 function fmtError(err: unknown): string {
   try {
@@ -80,7 +82,8 @@ export function formatIncomingRequest(
 
   let resultHeader;
   try {
-    resultHeader = validator.parameters?.header?.safeParse(message.headers);
+    const headerSchema = validator.parameters?.header;
+    resultHeader = headerSchema?.safeParse(matchHeaderNames(message.headers, headerSchema));
     if (resultHeader?.error) {
       errors.addIssue({
         in: "headers",
@@ -123,23 +126,20 @@ export function formatIncomingRequest(
   };
 }
 
-export function convertPathParams(path: string): { path: string; params: string[] } {
-  const paramRegex = /:([^/]+)/g;
-
-  const newPath = cleanPath(path).replace(paramRegex, "{$1}");
-
-  const paramNames: string[] = [];
-  let match: RegExpExecArray | null = null;
-  while ((match = paramRegex.exec(path)) !== null) {
-    paramNames.push(match[1]!);
+/**
+ * Node lowercases incoming header names, so the ones declared in the schema are looked up
+ * case-insensitively and handed to the validator under their declared names.
+ */
+function matchHeaderNames(
+  headers: Record<string, unknown>,
+  schema: z.ZodObject
+): Record<string, unknown> {
+  const matched = { ...headers };
+  for (const name of Object.keys(schema.shape)) {
+    const value = headers[name.toLowerCase()];
+    if (value !== undefined) {
+      matched[name] = value;
+    }
   }
-
-  return {
-    path: newPath,
-    params: paramNames,
-  };
-}
-
-export function cleanPath(path: string): string {
-  return path.replace(/\/+/gi, "/");
+  return matched;
 }

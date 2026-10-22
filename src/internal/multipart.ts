@@ -186,6 +186,7 @@ export async function encode(
             `Content-Disposition: form-data; name="${key}"; filename="${value.name}"\r\n`
           ),
           Buffer.from(`Content-Type: ${value.type || "application/octet-stream"}\r\n\r\n`),
+          // oxlint-disable-next-line no-await-in-loop -- parts must be written in order
           Buffer.from(await value.arrayBuffer()),
           Buffer.from("\r\n")
         );

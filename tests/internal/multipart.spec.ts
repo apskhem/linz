@@ -1,4 +1,4 @@
-import { encode, generateBoundary, parse } from "../src/internal/multipart";
+import { encode, generateBoundary, parse } from "../../src/internal/multipart";
 
 describe("multipart", () => {
   it("should terminate every boundary line with CRLF when encoding", async () => {

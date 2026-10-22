@@ -3,7 +3,7 @@ import * as http from "http";
 import { parse as parseContentType } from "fast-content-type-parse";
 import { mapValues } from "radash";
 
-import * as multipart from "./multipart";
+import * as multipart from "../internal/multipart";
 
 /**
  * Configurations for incoming requests.
@@ -142,26 +142,6 @@ export function parseBody(
     const message = `'${contentType.type}' content type is not supported`;
     throw new BodyParserError(415, message);
   }
-}
-
-export function parseCookies(cookieHeader: string): Record<string, string> {
-  return cookieHeader.split(";").reduce(
-    (cookies, cookie) => {
-      const [name, ...rest] = cookie.trim().split("=");
-      if (!name) {
-        return cookies;
-      }
-      const value = rest.join("=");
-      try {
-        cookies[name] = decodeURIComponent(value);
-      } catch {
-        // keep the raw value of a malformed cookie instead of failing the whole request
-        cookies[name] = value;
-      }
-      return cookies;
-    },
-    {} as Record<string, string>
-  );
 }
 
 function getCharset(parameters?: Record<string, string>): BufferEncoding {

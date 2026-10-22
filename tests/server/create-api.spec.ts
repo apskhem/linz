@@ -19,7 +19,7 @@ import {
   Security,
   TextBody,
   UrlEncodedBody,
-} from "../src";
+} from "../../src";
 
 function createSecurity(name: string, token: string, user: string) {
   return new Security({
@@ -98,6 +98,12 @@ const endpoints: LinzEndpointGroup = {
     requestBody: new TextBody(),
     responses: { 201: new TextBody() },
     handler: async ({ body }) => body,
+  }),
+  "get:/header": endpoint({
+    operationId: "getHeader",
+    parameters: { header: z.object({ "X-Api-Key": z.string() }) },
+    responses: { 200: z.object({ key: z.string() }) },
+    handler: async ({ headers }) => ({ key: headers["X-Api-Key"] }),
   }),
   "get:/form": endpoint({
     operationId: "getForm",
@@ -284,6 +290,13 @@ describe(createApi.name, () => {
 
       expect(res.status).toBe(200);
     });
+  });
+
+  it("should match declared header names case-insensitively", async () => {
+    const res = await fetch(`${url}/header`, { headers: { "x-api-key": "secret" } });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ key: "secret" });
   });
 
   it("should respond with a valid multipart body", async () => {

@@ -1,11 +1,11 @@
-import { convertPathParams } from "../src/internal/utils";
+import { convertPathParams, parseMethodPath } from "../../src/internal/paths";
 
 describe(convertPathParams.name, () => {
   it("should replace single parameterized segments correctly", () => {
     const result = convertPathParams("/users/:userId");
     expect(result).toEqual({
       path: "/users/{userId}",
-      params: [ "userId" ]
+      params: ["userId"],
     });
   });
 
@@ -13,7 +13,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/users/:userId/posts/:postId");
     expect(result).toEqual({
       path: "/users/{userId}/posts/{postId}",
-      params: [ "userId", "postId" ]
+      params: ["userId", "postId"],
     });
   });
 
@@ -21,7 +21,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/users/posts");
     expect(result).toEqual({
       path: "/users/posts",
-      params: []
+      params: [],
     });
   });
 
@@ -29,7 +29,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/users/:userId/posts/:postId/");
     expect(result).toEqual({
       path: "/users/{userId}/posts/{postId}/",
-      params: [ "userId", "postId" ]
+      params: ["userId", "postId"],
     });
   });
 
@@ -37,7 +37,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/users///:userId//posts/:postId");
     expect(result).toEqual({
       path: "/users/{userId}/posts/{postId}",
-      params: [ "userId", "postId" ]
+      params: ["userId", "postId"],
     });
   });
 
@@ -45,7 +45,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/products/:product-id");
     expect(result).toEqual({
       path: "/products/{product-id}",
-      params: [ "product-id" ]
+      params: ["product-id"],
     });
   });
 
@@ -53,7 +53,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/api/:version1/:id123");
     expect(result).toEqual({
       path: "/api/{version1}/{id123}",
-      params: [ "version1", "id123" ]
+      params: ["version1", "id123"],
     });
   });
 
@@ -61,7 +61,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("");
     expect(result).toEqual({
       path: "",
-      params: []
+      params: [],
     });
   });
 
@@ -69,7 +69,7 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/:onlyParam");
     expect(result).toEqual({
       path: "/{onlyParam}",
-      params: [ "onlyParam" ]
+      params: ["onlyParam"],
     });
   });
 
@@ -77,15 +77,25 @@ describe(convertPathParams.name, () => {
     const result = convertPathParams("/path-with-special_chars-:param123");
     expect(result).toEqual({
       path: "/path-with-special_chars-{param123}",
-      params: [ "param123" ]
+      params: ["param123"],
     });
   });
-  
+
   it("should handle complex nested paths with multiple parameters", () => {
     const result = convertPathParams("/api/v1/users/:userId/orders/:orderId/items/:itemId");
     expect(result).toEqual({
       path: "/api/v1/users/{userId}/orders/{orderId}/items/{itemId}",
-      params: [ "userId", "orderId", "itemId" ]
+      params: ["userId", "orderId", "itemId"],
     });
+  });
+});
+
+describe(parseMethodPath.name, () => {
+  it("should split the method from the path", () => {
+    expect(parseMethodPath("get:/users/:id")).toEqual({ method: "get", path: "/users/:id" });
+  });
+
+  it("should keep colons within the path", () => {
+    expect(parseMethodPath("post:/a/:b/:c")).toEqual({ method: "post", path: "/a/:b/:c" });
   });
 });

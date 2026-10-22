@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "declaration": true,
     "removeComments": true,
     "allowSyntheticDefaultImports": true,
@@ -8,9 +9,10 @@
     "target": "es2024",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./src",
     "skipLibCheck": true,
-    
+    // `@types/*` packages are no longer included automatically since TypeScript 6
+    "types": ["node", "jest"],
+
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,

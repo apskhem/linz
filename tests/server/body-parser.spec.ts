@@ -1,5 +1,5 @@
-import { encode, generateBoundary } from "../src/internal/multipart";
-import { BodyParserError, parseBody, parseCookies } from "../src/internal/middlewares";
+import { encode, generateBoundary } from "../../src/internal/multipart";
+import { BodyParserError, parseBody } from "../../src/server/body-parser";
 
 function expectParserError(fn: () => unknown, statusCode: number) {
   try {
@@ -11,16 +11,6 @@ function expectParserError(fn: () => unknown, statusCode: number) {
   }
   throw new Error("Expected a BodyParserError to be thrown");
 }
-
-describe(parseCookies.name, () => {
-  it("should decode cookie values", () => {
-    expect(parseCookies("a=1; b=hello%20world")).toEqual({ a: "1", b: "hello world" });
-  });
-
-  it("should keep the raw value of a malformed cookie instead of throwing", () => {
-    expect(parseCookies("bad=%E0%A4%A; good=ok")).toEqual({ bad: "%E0%A4%A", good: "ok" });
-  });
-});
 
 describe(parseBody.name, () => {
   const urlEncoded = Buffer.from("tag=a&tag=b&single=x");

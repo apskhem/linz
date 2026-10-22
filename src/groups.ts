@@ -1,8 +1,7 @@
 import { mapKeys, mapValues } from "radash";
 
-import { cleanPath } from "./internal/utils";
-
-import { LinzEndpoint, LinzEndpointGroup } from ".";
+import type { LinzEndpoint, LinzEndpointGroup } from "./endpoint";
+import { cleanPath } from "./internal/paths";
 
 /**
  * Merges multiple endpoint groups into a single group, applying a prefix to all keys.
