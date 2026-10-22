@@ -1,40 +1,22 @@
-import * as http from "http";
+import * as http from "node:http";
 
-import { buildJson, createApi, Router } from "@apskhem/linz";
 import pino from "pino";
-import router from "router";
-import { install } from "source-map-support";
 
-import pkg from "../package.json";
+import { createApp } from "./app";
+import { config } from "./config";
 
-// Enable source map support
-install();
+const logger = pino({ level: config.logLevel });
+const server = http.createServer(createApp(logger).handler());
 
-const app = new Router();
-
-const openApiSpec = buildJson({
-  openapi: "3.1.0",
-  info: {
-    title: "Linz Bootstrap API",
-    version: pkg.version,
-  },
-  paths: router,
+server.listen(config.port, () => {
+  const url = `http://localhost:${config.port}`;
+  logger.info(`Listening on ${url}, docs at ${url}/docs`);
 });
 
-const logger = pino();
-
-createApi(app, router, {
-  cors: true,
-  request: {
-    multiValueQueryString: true
-  },
-  docs: {
-    viewer: "scalar",
-    spec: openApiSpec,
-    docsPath: "/",
-    specPath: "/openapi.json",
-  },
-  logger
-});
-
-http.createServer(app.handler()).listen(3000);
+// let in-flight requests finish before exiting, e.g. when a container is stopped
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    logger.info(`Received ${signal}, shutting down`);
+    server.close(() => process.exit(0));
+  });
+}

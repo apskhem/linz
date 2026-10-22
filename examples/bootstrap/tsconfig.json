@@ -1,27 +1,15 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "declaration": true,
-    "removeComments": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "target": "es2024",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "skipLibCheck": true,
-    // `@types/*` packages are no longer included automatically since TypeScript 6
-    "types": ["node", "jest"],
-
+    "target": "es2023",
+    // esbuild bundles the app and tsx runs it in development, so imports need no file extensions
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["node"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "forceConsistentCasingInFileNames": true,
-    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.spec.ts"],
-  "exclude": ["node_modules", "dist", "*/**.js"]
+  "include": ["src", "scripts"]
 }

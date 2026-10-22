@@ -1,21 +1,186 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Linz Bootstrap API",
+    "title": "Notes API",
+    "description": "An example API built with Linz.",
     "version": "1.0.0"
   },
   "jsonSchemaDialect": "https://spec.openapis.org/oas/3.1/dialect/base",
   "paths": {
-    "/v1/echo/{path}": {
-      "post": {
+    "/health": {
+      "get": {
         "tags": [
-          "Simple"
+          "Health"
         ],
-        "summary": "echoPathSimple",
-        "operationId": "echoPathSimple",
+        "summary": "Check that the service is up",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetHealthOkResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notes": {
+      "get": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "List notes",
+        "operationId": "listNotes",
         "parameters": [
           {
-            "name": "path",
+            "name": "tag",
+            "in": "query",
+            "description": "Only notes with this tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Only notes whose title contains this text",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNotesOkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Create a note",
+        "operationId": "createNote",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNoteRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNoteCreatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notes/{id}": {
+      "get": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Get a note",
+        "operationId": "getNote",
+        "parameters": [
+          {
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -24,12 +189,12 @@
           }
         ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EchoPathSimpleResponse"
+                  "$ref": "#/components/schemas/GetNoteOkResponse"
                 }
               }
             }
@@ -45,7 +210,7 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "Note not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -65,98 +230,45 @@
             }
           }
         }
-      }
-    },
-    "/v1/echo/simple/body": {
-      "post": {
+      },
+      "put": {
         "tags": [
-          "Simple"
+          "Notes"
         ],
-        "summary": "echoBodySimple",
-        "operationId": "echoBodySimple",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EchoBodySimpleRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoBodySimpleResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/echo/simple/query": {
-      "post": {
-        "tags": [
-          "Simple"
-        ],
-        "summary": "echoBodyQuery",
-        "operationId": "echoBodyQuery",
+        "summary": "Replace a note",
+        "operationId": "updateNote",
         "parameters": [
           {
-            "name": "echo",
-            "in": "query",
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
-              "type": "array",
-              "prefixItems": [
-                {
-                  "type": "string"
-                }
-              ]
+              "type": "string"
             }
           }
         ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNoteRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EchoBodyQueryResponse"
+                  "$ref": "#/components/schemas/UpdateNoteOkResponse"
                 }
               }
             }
@@ -171,8 +283,28 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not Found",
+            "description": "Note not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
             "content": {
               "application/json": {
                 "schema": {
@@ -192,29 +324,31 @@
             }
           }
         }
-      }
-    },
-    "/v1/echo/simple/void": {
-      "post": {
+      },
+      "delete": {
         "tags": [
-          "Simple"
+          "Notes"
         ],
-        "summary": "echoVoidSimple",
-        "operationId": "echoVoidSimple",
-        "requestBody": {
-          "description": "Echo void result",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EchoVoidSimpleRequestBody"
-              }
+        "summary": "Delete a note",
+        "operationId": "deleteNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
-          },
-          "required": true
-        },
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "204": {
+            "description": "No Content",
             "content": {
               "application/json": {}
             }
@@ -229,8 +363,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not Found",
+            "description": "Note not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -252,70 +396,33 @@
         }
       }
     },
-    "/v1/echo/simple/error": {
+    "/v1/notes/{id}/attachments": {
       "post": {
         "tags": [
-          "Simple"
+          "Notes"
         ],
-        "summary": "echoError",
-        "operationId": "echoError",
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EchoErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonApiError"
-                }
-              }
+        "summary": "Attach a file to a note",
+        "operationId": "uploadAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        }
-      }
-    },
-    "/v1/echo/simple/upload": {
-      "post": {
-        "tags": [
-          "Simple"
         ],
-        "summary": "echoUploadSimple",
-        "operationId": "echoUploadSimple",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/EchoUploadSimpleRequestBody"
-              },
-              "encoding": {
-                "file": {
-                  "contentType": "image/png, image/jpeg",
-                  "headers": {
-                    "X-Custom-Header": {
-                      "description": "This is a custom header",
-                      "type": "string"
-                    }
-                  }
-                }
+                "$ref": "#/components/schemas/UploadAttachmentRequestBody"
               }
             }
           },
@@ -327,7 +434,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EchoUploadSimpleResponse"
+                  "$ref": "#/components/schemas/UploadAttachmentCreatedResponse"
                 }
               }
             }
@@ -342,8 +449,28 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not Found",
+            "description": "Note not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
             "content": {
               "application/json": {
                 "schema": {
@@ -368,117 +495,259 @@
   },
   "components": {
     "schemas": {
-      "EchoPathSimpleResponse": {
+      "GetHealthOkResponse": {
         "type": "object",
         "properties": {
-          "path": {
-            "type": "string"
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "uptime": {
+            "type": "number",
+            "description": "Seconds since start"
           }
         },
         "required": [
-          "path"
+          "status",
+          "uptime"
         ],
         "additionalProperties": false
       },
-      "EchoBodySimpleRequestBody": {
+      "ListNotesOkResponse": {
         "type": "object",
         "properties": {
-          "echo": {
-            "anyOf": [
-              {
-                "type": "string"
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
               },
-              {
-                "type": "null"
-              }
-            ]
+              "required": [
+                "id",
+                "title",
+                "content",
+                "tags",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
-          "echo"
+          "items"
         ],
         "additionalProperties": false
       },
-      "EchoBodySimpleResponse": {
+      "GetNoteOkResponse": {
         "type": "object",
         "properties": {
-          "body": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "title": {
             "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           }
         },
         "required": [
-          "body"
+          "id",
+          "title",
+          "content",
+          "tags",
+          "createdAt"
         ],
         "additionalProperties": false
       },
-      "EchoBodyQueryResponse": {
+      "CreateNoteRequestBody": {
         "type": "object",
         "properties": {
-          "body": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "default": "",
             "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
-          "body"
-        ],
-        "additionalProperties": false
+          "title"
+        ]
       },
-      "EchoVoidSimpleRequestBody": {
+      "CreateNoteCreatedResponse": {
         "type": "object",
         "properties": {
-          "echo": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "title": {
             "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           }
         },
         "required": [
-          "echo"
+          "id",
+          "title",
+          "content",
+          "tags",
+          "createdAt"
         ],
         "additionalProperties": false
       },
-      "EchoErrorResponse": {
+      "UpdateNoteRequestBody": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "default": "",
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateNoteOkResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "content",
+          "tags",
+          "createdAt"
+        ],
         "additionalProperties": false
       },
-      "EchoUploadSimpleRequestBody": {
+      "UploadAttachmentRequestBody": {
         "type": "object",
         "properties": {
           "file": {
             "type": "string",
             "format": "binary",
             "contentMediaType": "application/octet-stream"
-          },
-          "field": {
-            "type": "string"
           }
         },
         "required": [
-          "file",
-          "field"
-        ],
-        "additionalProperties": false
+          "file"
+        ]
       },
-      "EchoUploadSimpleResponse": {
+      "UploadAttachmentCreatedResponse": {
         "type": "object",
         "properties": {
-          "field": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "type": {
             "type": "string"
           }
         },
         "required": [
-          "field"
+          "name",
+          "size",
+          "type"
         ],
         "additionalProperties": false
       },
       "JsonApiError": {
-        "description": "JSON:API error response object.",
         "type": "object",
         "properties": {
           "errors": {
-            "description": "Array of JSON:API error objects.",
             "type": "array",
             "items": {
-              "description": "A single error object conforming to JSON:API specification.",
               "type": "object",
               "properties": {
                 "id": {
@@ -541,20 +810,34 @@
                   "additionalProperties": {}
                 }
               },
-              "additionalProperties": false
-            }
+              "additionalProperties": false,
+              "description": "A single error object conforming to JSON:API specification."
+            },
+            "description": "Array of JSON:API error objects."
           }
         },
         "required": [
           "errors"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "JSON:API error response object."
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   },
   "tags": [
     {
-      "name": "Simple"
+      "name": "Health",
+      "description": "Service status"
+    },
+    {
+      "name": "Notes",
+      "description": "Create and manage notes"
     }
   ]
 }

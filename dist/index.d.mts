@@ -3,44 +3,13 @@ export * from '@routejs/router';
 import { OpenAPIV3_1 } from 'openapi-types';
 export { OpenAPIV3_1 as oas3 } from 'openapi-types';
 import * as http from 'http';
-import { CorsOptions } from 'cors';
 import z, { z as z$1 } from 'zod';
-
-type RequestBodyConfig = {
-    multiValueQueryString?: boolean;
-    multiValueFormData?: boolean;
-    multiValueUrlEncoded?: boolean;
-};
-
-interface Logger {
-    emergency?: (message: string, ...meta: any[]) => void;
-    alert?: (message: string, ...meta: any[]) => void;
-    critical?: (message: string, ...meta: any[]) => void;
-    error?: (message: string, ...meta: any[]) => void;
-    warning?: (message: string, ...meta: any[]) => void;
-    notice?: (message: string, ...meta: any[]) => void;
-    info?: (message: string, ...meta: any[]) => void;
-    debug?: (message: string, ...meta: any[]) => void;
-}
-type CreateApiConfig = {
-    cors: boolean | CorsOptions;
-    docs: {
-        viewer: "scalar" | "swagger" | "redoc" | "rapidoc" | "spotlight-elements";
-        spec: OpenAPIV3_1.Document;
-        docsPath: string;
-        specPath: string;
-        theme?: string;
-    };
-    request: RequestBodyConfig;
-    logger: Logger;
-    fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
-};
-declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
+import { Readable } from 'stream';
+import { CorsOptions } from 'cors';
 
 type ZodParameterTypes = z.ZodString | z.ZodNumber | z.ZodNaN | z.ZodBigInt | z.ZodBoolean | z.ZodDate | z.ZodUndefined | z.ZodEnum<Record<string, string>> | z.ZodOptional<z.ZodType> | z.ZodPipe<z.ZodType, z.ZodTransform<any, string>> | z.ZodDefault<z.ZodType>;
 type ZodMultiMapValues<T extends z.ZodType = ZodParameterTypes> = z.ZodArray<T> | z.ZodTuple<T[]> | T;
-type Extensions<T extends Record<string, any> = Record<string, any>> = T;
-type Tag = OpenAPIV3_1.TagObject;
+
 type EncodingItem = {
     contentType?: string[];
     headers?: z.ZodObject<Record<string, ZodParameterTypes>>;
@@ -48,6 +17,103 @@ type EncodingItem = {
     explode?: string;
     allowReserved?: string;
 };
+type SerializeResult = {
+    buffer: Buffer;
+    headers: http.OutgoingHttpHeaders;
+};
+declare abstract class SenderBody<B extends z.ZodType = any> {
+    private _description;
+    private _headers;
+    private _examples;
+    abstract readonly body: B;
+    abstract mimeType: string;
+    abstract serialize<T extends z.infer<B>>(data: T): Promise<SerializeResult>;
+    describe(description: SenderBody["_description"]): this;
+    get description(): SenderBody["_description"];
+    requireHeaders(headers: SenderBody["_headers"]): this;
+    get requiredHeaders(): SenderBody["_headers"];
+    setExamples(examples: SenderBody["_examples"]): this;
+    getExamples(): SenderBody["_examples"];
+    parse(payload: any): z.output<B>;
+}
+declare class JsonBody<B extends z.ZodType = any> extends SenderBody<B> {
+    readonly body: B;
+    static readonly mimeType: string;
+    constructor(body: B);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
+    get mimeType(): string;
+}
+type FormDataValidator = ZodParameterTypes | z.ZodCustom<File, File>;
+declare class FormDataBody<B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+    readonly body: B;
+    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
+    static readonly mimeType: string;
+    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
+    get mimeType(): string;
+}
+declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodMultiMapValues>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
+    readonly body: B;
+    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
+    static readonly mimeType: string;
+    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
+    serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<SerializeResult>;
+    get mimeType(): string;
+}
+declare class OctetStreamBody<B extends z.ZodCustom<Buffer, Buffer> = any> extends SenderBody<B> {
+    readonly body: B;
+    static readonly mimeType: string;
+    constructor(body?: B);
+    serialize<T extends z.output<B>>(data: T): Promise<SerializeResult>;
+    get mimeType(): string;
+}
+declare class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
+    readonly body: B;
+    static readonly mimeType: string;
+    constructor(body?: B);
+    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
+    get mimeType(): string;
+}
+declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
+    static readonly mimeType: string;
+    get mimeType(): string;
+}
+
+declare class HttpResponse<T> {
+    readonly payload: {
+        readonly headers?: http.OutgoingHttpHeaders;
+        readonly status?: number;
+        readonly body?: T | ReadableStream | Readable;
+    };
+    constructor(payload: {
+        readonly headers?: http.OutgoingHttpHeaders;
+        readonly status?: number;
+        readonly body?: T | ReadableStream | Readable;
+    });
+    static withoutBody(status: number, headers?: http.OutgoingHttpHeaders): HttpResponse<void>;
+}
+
+type Extensions<T extends Record<string, any> = Record<string, any>> = T;
+interface SecurityConfig {
+    name: string;
+    schema: OpenAPIV3_1.SecuritySchemeObject;
+    handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+}
+declare class Security implements SecurityConfig {
+    readonly name: string;
+    readonly schema: OpenAPIV3_1.SecuritySchemeObject;
+    readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
+    constructor(config: SecurityConfig);
+    apply(scopes: string[]): AppliedSecurity;
+}
+declare class AppliedSecurity {
+    readonly scopes: string[];
+    readonly security: Security;
+    constructor(usedSecurity: Security, scopes: string[]);
+    authenticate(req: Readonly<http.IncomingMessage>, extensions: Extensions): Promise<void>;
+}
+
+type Tag = OpenAPIV3_1.TagObject;
 type LinzEndpoint = {
     tags?: Tag[];
     summary?: string;
@@ -122,37 +188,7 @@ declare function endpoint<TExt extends Extensions, TQuery extends NonNullable<Re
         res: http.ServerResponse;
     }) => Promise<MergedResponse<TResponse> | HttpResponse<MergedResponse<TResponse>>>;
 }): LinzEndpoint;
-declare class HttpResponse<T> {
-    readonly payload: {
-        readonly headers?: http.OutgoingHttpHeaders;
-        readonly status?: number;
-        readonly body?: T | ReadableStream;
-    };
-    constructor(payload: {
-        readonly headers?: http.OutgoingHttpHeaders;
-        readonly status?: number;
-        readonly body?: T | ReadableStream;
-    });
-    static withoutBody(status: number, headers?: http.OutgoingHttpHeaders): HttpResponse<void>;
-}
-interface SecurityConfig {
-    name: string;
-    schema: OpenAPIV3_1.SecuritySchemeObject;
-    handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
-}
-declare class Security implements SecurityConfig {
-    readonly name: string;
-    readonly schema: OpenAPIV3_1.SecuritySchemeObject;
-    readonly handler: (req: Readonly<http.IncomingMessage>, scopes: string[], extensions: Extensions) => Promise<void>;
-    constructor(config: SecurityConfig);
-    apply(scopes: string[]): AppliedSecurity;
-}
-declare class AppliedSecurity {
-    readonly scopes: string[];
-    readonly security: Security;
-    constructor(usedSecurity: Security, scopes: string[]);
-    authenticate(req: Readonly<http.IncomingMessage>, extensions: Extensions): Promise<void>;
-}
+
 type JsonApiErrorItem = {
     id?: string;
     links?: {
@@ -178,67 +214,69 @@ declare class ApiError extends Error {
     readonly headers?: http.OutgoingHttpHeaders | undefined;
     constructor(status: number, errors: JsonApiErrorItem | JsonApiErrorItem[], headers?: http.OutgoingHttpHeaders | undefined);
 }
-type SerializeResult = {
-    buffer: Buffer;
-    headers: http.OutgoingHttpHeaders;
+
+declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
+declare function applyGroupConfig(group: LinzEndpointGroup, config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>): LinzEndpointGroup;
+
+type RequestBodyConfig = {
+    multiValueQueryString?: boolean;
+    multiValueFormData?: boolean;
+    multiValueUrlEncoded?: boolean;
 };
-declare abstract class SenderBody<B extends z.ZodType = any> {
-    private _description;
-    private _headers;
-    private _examples;
-    abstract readonly body: B;
-    abstract mimeType: string;
-    abstract serialize<T extends z.infer<B>>(data: T): Promise<SerializeResult>;
-    describe(description: SenderBody["_description"]): this;
-    get description(): SenderBody["_description"];
-    requireHeaders(headers: SenderBody["_headers"]): this;
-    get requiredHeaders(): SenderBody["_headers"];
-    setExamples(examples: SenderBody["_examples"]): this;
-    getExamples(): SenderBody["_examples"];
-    parse(payload: any): z.output<B>;
+
+declare const DOCS_VIEWERS: {
+    readonly scalar: {
+        readonly template: string;
+        readonly defaultTheme: "purple";
+    };
+    readonly swagger: {
+        readonly template: string;
+        readonly defaultTheme: "classic";
+    };
+    readonly redoc: {
+        readonly template: string;
+        readonly defaultTheme: "";
+    };
+    readonly rapidoc: {
+        readonly template: string;
+        readonly defaultTheme: "";
+    };
+    readonly "spotlight-elements": {
+        readonly template: string;
+        readonly defaultTheme: "";
+    };
+};
+type DocsViewer = keyof typeof DOCS_VIEWERS;
+
+interface Logger {
+    emergency?: (message: string, ...meta: any[]) => void;
+    alert?: (message: string, ...meta: any[]) => void;
+    critical?: (message: string, ...meta: any[]) => void;
+    error?: (message: string, ...meta: any[]) => void;
+    warning?: (message: string, ...meta: any[]) => void;
+    notice?: (message: string, ...meta: any[]) => void;
+    info?: (message: string, ...meta: any[]) => void;
+    debug?: (message: string, ...meta: any[]) => void;
 }
-declare class JsonBody<B extends z.ZodType = any> extends SenderBody<B> {
-    readonly body: B;
-    static readonly mimeType: string;
-    constructor(body: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
-    get mimeType(): string;
-}
-type FormDataValidator = ZodParameterTypes | z.ZodCustom<File, File>;
-declare class FormDataBody<B extends z.ZodObject<Record<string, ZodMultiMapValues<FormDataValidator>>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
-    readonly body: B;
-    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
-    static readonly mimeType: string;
-    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
-    get mimeType(): string;
-}
-declare class UrlEncodedBody<B extends z.ZodObject<Record<string, ZodMultiMapValues>> = any, K extends keyof z.infer<B> = any> extends SenderBody<B> {
-    readonly body: B;
-    readonly encoding?: Record<K, Readonly<EncodingItem>> | undefined;
-    static readonly mimeType: string;
-    constructor(body: B, encoding?: Record<K, Readonly<EncodingItem>> | undefined);
-    serialize<T extends z.TypeOf<B> | URLSearchParams>(data: T): Promise<SerializeResult>;
-    get mimeType(): string;
-}
-declare class OctetStreamBody<B extends z.ZodCustom<Buffer, Buffer> = any> extends SenderBody<B> {
-    readonly body: B;
-    static readonly mimeType: string;
-    constructor(body?: B);
-    serialize<T extends z.output<B>>(data: T): Promise<SerializeResult>;
-    get mimeType(): string;
-}
-declare class TextBody<B extends z.ZodString = any> extends SenderBody<B> {
-    readonly body: B;
-    static readonly mimeType: string;
-    constructor(body?: B);
-    serialize<T extends z.TypeOf<B>>(data: T): Promise<SerializeResult>;
-    get mimeType(): string;
-}
-declare class HtmlBody<B extends z.ZodString = any> extends TextBody<B> {
-    static readonly mimeType: string;
-    get mimeType(): string;
-}
+
+type CreateApiConfig = {
+    cors: boolean | CorsOptions;
+    docs: {
+        viewer: DocsViewer;
+        spec: OpenAPIV3_1.Document;
+        docsPath: string;
+        specPath: string;
+        theme?: string;
+    };
+    request: RequestBodyConfig;
+    logger: Logger;
+    fallbackHandler: (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
+    notFound: boolean;
+};
+
+declare function createApi(app: Router, endpoints: LinzEndpointGroup, config?: Partial<CreateApiConfig>): void;
+
+declare function notFoundHandler(config?: Partial<Pick<CreateApiConfig, "fallbackHandler" | "logger">>): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void>;
 
 declare const JSON_SCHEMA_DIALECTS: readonly ["https://spec.openapis.org/oas/3.1/dialect/base", "https://spec.openapis.org/oas/3.1/dialect/2024-11-10"];
 type BuilderConfig = {
@@ -253,7 +291,4 @@ type BuilderConfig = {
 };
 declare function buildJson(config: BuilderConfig): OpenAPIV3_1.Document;
 
-declare function mergeEndpointGroups(prefix: string, groups: LinzEndpointGroup[]): LinzEndpointGroup;
-declare function applyGroupConfig(group: LinzEndpointGroup, config: Partial<Pick<LinzEndpoint, "tags" | "security" | "hidden" | "deprecated">>): LinzEndpointGroup;
-
-export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, type JsonApiErrorItem, type JsonApiErrorResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups };
+export { ApiError, AppliedSecurity, type BuilderConfig, type CreateApiConfig, FormDataBody, type HTTPMessage, HtmlBody, type HttpMethod, HttpResponse, type JsonApiErrorItem, type JsonApiErrorResponse, JsonBody, type LinzEndpoint, type LinzEndpointGroup, type Logger, METHODS, OctetStreamBody, Security, TextBody, UrlEncodedBody, applyGroupConfig, buildJson, createApi, endpoint, mergeEndpointGroups, notFoundHandler };

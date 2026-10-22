@@ -35,8 +35,9 @@
     "check": "tsc --noEmit",
     "build": "npx tsup",
     "test": "jest",
-    "lint": "oxlint src tests",
-    "lint:fix": "oxlint src tests --fix"
+    "test:e2e": "tsup --out-dir e2e/.build && node e2e/run.mjs",
+    "lint": "oxlint src tests e2e",
+    "lint:fix": "oxlint src tests e2e --fix"
   },
   "dependencies": {
     "@routejs/router": "^3.0.3",
@@ -50,6 +51,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@orangeopensource/hurl": "^8.0.4",
     "@types/cors": "^2.8.19",
     "@types/html-minifier-terser": "^7.0.2",
     "@types/jest": "^30.0.0",

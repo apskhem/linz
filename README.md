@@ -16,7 +16,7 @@ Alternatively, include this line into your `package.json`.
 "@apskhem/linz": "github:apskhem/linz#main"
 ```
 
-You can view example usage from `examples`.
+See [`examples/bootstrap`](examples/bootstrap) for a complete example API, with a suggested project layout and a walkthrough of adding endpoints.
 
 ## Limitations
 

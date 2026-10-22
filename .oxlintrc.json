@@ -11,9 +11,7 @@
     "correctness": "warn",
     "perf": "warn"
   },
-  "rules": {
-
-  },
+  "rules": {},
   "settings": {
     "jsx-a11y": {
       "polymorphicPropName": null,
@@ -38,5 +36,7 @@
     "node": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": [
+    "e2e/.build"
+  ]
 }
